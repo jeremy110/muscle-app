@@ -1,0 +1,1493 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>肌肉互動原型 v0.2 · Z-Anatomy</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0e0f12">
+<meta name="description" content="互動式 3D 肌肉解剖工具,給健身教練與物理治療師使用">
+
+<!-- iOS -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="肌肉互動">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<style>
+  :root {
+    --bg: #0e0f12;
+    --bg-panel: rgba(22, 24, 28, 0.92);
+    --bg-panel-solid: #16181c;
+    --border: rgba(255, 255, 255, 0.08);
+    --border-strong: rgba(255, 255, 255, 0.18);
+    --text: #e8e6e0;
+    --text-muted: #8a8780;
+    --text-dim: #5a5853;
+    --accent: #c94c4c;
+    --accent-soft: rgba(201, 76, 76, 0.15);
+    --highlight: #f5b342;
+    --info: #6fa8dc;
+    --success: #7cb87a;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%; width: 100%;
+    overflow: hidden; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue",
+      "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+    font-size: 14px; -webkit-font-smoothing: antialiased; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #canvas-container { position: absolute; inset: 0; z-index: 0; }
+
+  /* === Loading === */
+  #loading {
+    position: absolute; inset: 0; z-index: 100;
+    background: var(--bg);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 24px; text-align: center;
+  }
+  .loading-text {
+    font-size: 11px; letter-spacing: 0.25em;
+    color: var(--text-muted); text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+  .loading-bar {
+    width: 240px; height: 2px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 1px; overflow: hidden;
+  }
+  #loading-fill {
+    height: 100%; width: 0%;
+    background: var(--text);
+    transition: width 0.2s ease;
+  }
+  #loading-pct {
+    font-size: 11px; color: var(--text-dim);
+    margin-top: 12px; font-variant-numeric: tabular-nums;
+  }
+  #file-drop {
+    margin-top: 32px;
+    border: 1px dashed var(--border-strong);
+    border-radius: 12px;
+    padding: 24px 28px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  #file-drop.dragover { border-color: var(--accent); color: var(--text); background: var(--accent-soft); }
+  #file-drop strong { display: block; color: var(--text); margin-bottom: 6px; font-weight: 500; }
+  #file-drop small { font-size: 12px; line-height: 1.6; }
+  #file-drop input { display: none; }
+  .loading-hint {
+    margin-top: 20px;
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.7;
+    max-width: 300px;
+  }
+
+  /* === Top === */
+  #top-bar {
+    position: absolute; top: 0; left: 0; right: 60px;
+    z-index: 10; padding: 14px 18px 10px;
+    background: linear-gradient(180deg, rgba(14,15,18,0.95) 0%, rgba(14,15,18,0) 100%);
+    pointer-events: none;
+  }
+  #title {
+    font-size: 11px; letter-spacing: 0.2em;
+    color: var(--text-muted); text-transform: uppercase;
+    font-weight: 500;
+  }
+  #title span { color: var(--accent); }
+  #subtitle {
+    font-size: 11px; color: var(--text-dim);
+    margin-top: 2px;
+  }
+
+  /* === 工具列 === */
+  #tool-bar {
+    position: absolute; top: 14px; right: 18px;
+    z-index: 11; display: flex; flex-direction: column; gap: 6px;
+  }
+  .tool-btn {
+    width: 38px; height: 38px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-muted);
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    transition: all 0.15s ease;
+  }
+  .tool-btn:hover { color: var(--text); border-color: var(--border-strong); }
+  .tool-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+  /* === 底部資訊面板 === */
+  #info-panel {
+    position: absolute; bottom: 0; left: 0; right: 0; z-index: 10;
+    background: var(--bg-panel-solid);
+    border-top: 1px solid var(--border);
+    max-height: 55vh; overflow-y: auto;
+    transform: translateY(calc(100% - 56px));
+    transition: transform 0.3s cubic-bezier(0.2, 0.9, 0.3, 1);
+  }
+  #info-panel.expanded { transform: translateY(0); }
+  #info-handle {
+    padding: 12px 18px;
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer; border-bottom: 1px solid var(--border);
+  }
+  #info-handle-label {
+    font-size: 11px; letter-spacing: 0.15em;
+    color: var(--text-muted); text-transform: uppercase;
+  }
+  #info-handle-icon {
+    color: var(--text-muted); font-size: 12px;
+    transition: transform 0.3s ease;
+  }
+  #info-panel.expanded #info-handle-icon { transform: rotate(180deg); }
+  #info-body { padding: 16px 18px 24px; }
+  .info-empty {
+    color: var(--text-dim); font-size: 13px;
+    line-height: 1.7; text-align: center; padding: 8px 0;
+  }
+  .info-title {
+    font-size: 18px; font-weight: 600; margin: 0 0 4px;
+  }
+  .info-latin {
+    font-size: 12px; color: var(--text-muted);
+    font-style: italic; margin-bottom: 14px;
+  }
+  .info-section {
+    margin-bottom: 12px; padding: 12px 14px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border-left: 2px solid var(--text-dim);
+  }
+  .info-section-label {
+    font-size: 10px; letter-spacing: 0.15em;
+    text-transform: uppercase; color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+  .info-section-text {
+    font-size: 13px; line-height: 1.7; color: var(--text);
+  }
+  .info-action-row {
+    display: flex; gap: 8px; margin-top: 16px;
+  }
+  .info-action {
+    flex: 1; padding: 10px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text); font-family: inherit;
+    font-size: 12px; cursor: pointer;
+  }
+  .info-action:hover { border-color: var(--border-strong); }
+  .info-action.primary { background: var(--accent); border-color: var(--accent); color: white; }
+
+  /* === Lexicon 側欄 === */
+  #lexicon-panel {
+    position: absolute;
+    top: 0; right: 0; bottom: 0; width: 320px;
+    z-index: 15;
+    background: var(--bg-panel-solid);
+    border-left: 1px solid var(--border);
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.2, 0.9, 0.3, 1);
+    display: flex; flex-direction: column;
+  }
+  #lexicon-panel.open { transform: translateX(0); }
+  @media (max-width: 480px) {
+    #lexicon-panel { width: 100%; }
+  }
+  .lex-head {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .lex-head h2 {
+    margin: 0; font-size: 14px; font-weight: 500;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .lex-search-row { padding: 12px 18px; }
+  #lex-search {
+    width: 100%; padding: 9px 12px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text);
+    font-family: inherit; font-size: 13px;
+  }
+  #lex-search:focus { outline: none; border-color: var(--accent); }
+  #lex-tree {
+    flex: 1; overflow-y: auto;
+    padding: 4px 0 24px;
+  }
+  .lex-group {
+    border-top: 1px solid var(--border);
+  }
+  .lex-group-head {
+    padding: 10px 18px;
+    display: flex; justify-content: space-between; align-items: center;
+    cursor: pointer; font-size: 12px;
+    color: var(--text-muted);
+    letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  .lex-group-head:hover { color: var(--text); }
+  .lex-group-count {
+    font-size: 11px; color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+  }
+  .lex-group-items {
+    display: none; padding-bottom: 6px;
+  }
+  .lex-group.open .lex-group-items { display: block; }
+  .lex-group.open .lex-group-head { color: var(--text); }
+  .lex-group-title { flex: 1; }
+  .lex-group-slider {
+    width: 72px;
+    margin: 0 10px 0 8px;
+    accent-color: var(--accent);
+    cursor: pointer;
+    height: 18px;
+  }
+  .lex-group-eye {
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 14px;
+    margin-right: 6px;
+    user-select: none;
+  }
+  .lex-group-eye.off { color: var(--text-dim); }
+  .lex-group-eye:hover { color: var(--text); }
+  .lex-item {
+    padding: 7px 18px 7px 32px;
+    font-size: 13px; color: var(--text);
+    cursor: pointer; line-height: 1.4;
+    border-left: 2px solid transparent;
+  }
+  .lex-item:hover { background: rgba(255,255,255,0.04); }
+  .lex-item.active {
+    background: var(--accent-soft);
+    border-left-color: var(--accent);
+    color: white;
+  }
+  .lex-item-latin {
+    font-size: 11px; color: var(--text-muted);
+    font-style: italic; margin-top: 2px;
+  }
+
+  /* === Modals === */
+  #records-modal, #marker-form-modal {
+    position: absolute; inset: 0; z-index: 20;
+    background: rgba(0,0,0,0.7);
+    display: none; align-items: center; justify-content: center;
+    padding: 20px; backdrop-filter: blur(4px);
+  }
+  #records-modal.open, #marker-form-modal.open { display: flex; }
+  .modal-inner {
+    background: var(--bg-panel-solid);
+    border: 1px solid var(--border); border-radius: 12px;
+    width: 100%; max-width: 420px; max-height: 80vh;
+    overflow: hidden; display: flex; flex-direction: column;
+  }
+  .modal-head {
+    padding: 16px 18px; border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .modal-head h2 { margin: 0; font-size: 15px; font-weight: 600; }
+  .modal-close {
+    background: none; border: none; color: var(--text-muted);
+    font-size: 22px; cursor: pointer; line-height: 1; padding: 0 4px;
+  }
+  .modal-body { overflow-y: auto; padding: 8px 0; }
+  .record-item {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+  }
+  .record-item:hover { background: rgba(255,255,255,0.03); }
+  .record-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 6px;
+  }
+  .record-name { font-size: 14px; font-weight: 500; }
+  .record-vas {
+    font-size: 11px; padding: 2px 8px; border-radius: 10px;
+    color: var(--accent); background: var(--accent-soft); font-weight: 500;
+  }
+  .record-note { font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-bottom: 4px; }
+  .record-date { font-size: 11px; color: var(--text-dim); }
+  .record-delete {
+    background: none; border: none; color: var(--text-dim);
+    font-size: 11px; cursor: pointer; padding: 4px 0; margin-top: 4px;
+  }
+  .record-delete:hover { color: var(--accent); }
+  .empty-records {
+    text-align: center; padding: 40px 20px;
+    color: var(--text-dim); font-size: 13px; line-height: 1.7;
+  }
+  .form-field { margin-bottom: 14px; padding: 0 18px; }
+  .form-label {
+    display: block; font-size: 11px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px;
+  }
+  .form-input, .form-textarea {
+    width: 100%; padding: 10px 12px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text);
+    font-family: inherit; font-size: 14px;
+  }
+  .form-input:focus, .form-textarea:focus { outline: none; border-color: var(--accent); }
+  .form-textarea { resize: vertical; min-height: 80px; }
+  .vas-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 0 18px; margin-bottom: 14px;
+  }
+  #vas-slider { flex: 1; accent-color: var(--accent); }
+  #vas-value {
+    font-size: 18px; font-weight: 600;
+    color: var(--accent); min-width: 28px; text-align: center;
+  }
+  .form-actions {
+    padding: 14px 18px; display: flex; gap: 8px;
+    border-top: 1px solid var(--border);
+  }
+  .form-btn {
+    flex: 1; padding: 12px; border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent; color: var(--text);
+    font-size: 14px; font-family: inherit; cursor: pointer; font-weight: 500;
+  }
+  .form-btn.primary { background: var(--accent); border-color: var(--accent); color: white; }
+
+  /* === Mark mode hint === */
+  #mark-mode-hint {
+    position: absolute; top: 70px; left: 50%;
+    transform: translateX(-50%); z-index: 9;
+    background: var(--accent); color: white;
+    padding: 8px 16px; border-radius: 20px;
+    font-size: 12px; font-weight: 500;
+    box-shadow: 0 4px 16px rgba(201, 76, 76, 0.4);
+    display: none; pointer-events: none;
+  }
+  #mark-mode-hint.show { display: block; }
+
+  /* === Floating chip showing currently selected muscle === */
+  #current-chip {
+    position: absolute;
+    top: 60px; left: 18px;
+    z-index: 9;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-strong);
+    border-radius: 20px;
+    padding: 8px 14px;
+    font-size: 13px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: none;
+    max-width: 60%;
+  }
+  #current-chip.show { display: block; }
+  #current-chip .chip-name { color: var(--text); font-weight: 500; }
+  #current-chip .chip-latin { color: var(--text-muted); font-size: 11px; font-style: italic; margin-top: 2px; }
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div id="loading">
+  <div class="loading-text">準備中</div>
+  <div class="loading-bar"><div id="loading-fill"></div></div>
+  <div id="loading-pct">等待模型檔案</div>
+  <label id="file-drop" for="file-input">
+    <strong>選擇或拖曳 .glb 檔案</strong>
+    <small>例如 4_-muscular-system.glb</small>
+    <input type="file" id="file-input" accept=".glb,.gltf">
+  </label>
+  <div class="loading-hint">
+    把 .glb 放在這個 HTML 旁邊、用本地伺服器開啟<br>
+    (例如執行 <code style="color:var(--text-muted)">python -m http.server</code>)會自動載入<br>
+    否則就用上面的選檔器手動載入
+  </div>
+</div>
+
+<div id="canvas-container"></div>
+
+<!-- Top -->
+<div id="top-bar">
+  <div id="title">肌肉互動原型 · <span>v0.2 Z-Anatomy</span></div>
+  <div id="subtitle" id="model-info"></div>
+</div>
+
+<!-- 目前選中的肌肉 -->
+<div id="current-chip">
+  <div class="chip-name" id="chip-name"></div>
+  <div class="chip-latin" id="chip-latin"></div>
+</div>
+
+<!-- 工具列 -->
+<div id="tool-bar">
+  <button class="tool-btn" id="btn-lexicon" title="解剖目錄">≡</button>
+  <button class="tool-btn" id="btn-mark" title="新增疼痛標記">＋</button>
+  <button class="tool-btn" id="btn-records" title="紀錄列表">◉</button>
+  <button class="tool-btn" id="btn-reset" title="重置視角">⟲</button>
+</div>
+
+<div id="mark-mode-hint">標記模式 · 點身體任一處</div>
+
+<!-- 底部資訊面板 -->
+<div id="info-panel">
+  <div id="info-handle">
+    <span id="info-handle-label">資訊面板</span>
+    <span id="info-handle-icon">▲</span>
+  </div>
+  <div id="info-body">
+    <p class="info-empty">點選任一肌肉看名稱與資訊<br>右上 ≡ 可開啟解剖目錄、＋ 新增疼痛標記</p>
+  </div>
+</div>
+
+<!-- Lexicon 側欄 -->
+<div id="lexicon-panel">
+  <div class="lex-head">
+    <h2>解剖目錄</h2>
+    <button class="modal-close" id="lex-close">✕</button>
+  </div>
+  <div class="lex-search-row">
+    <input id="lex-search" type="text" placeholder="搜尋肌肉(中/英/拉丁)">
+  </div>
+  <div id="lex-tree"></div>
+</div>
+
+<!-- 紀錄列表 modal -->
+<div id="records-modal">
+  <div class="modal-inner">
+    <div class="modal-head">
+      <h2>我的紀錄</h2>
+      <button class="modal-close" id="records-close">✕</button>
+    </div>
+    <div class="modal-body" id="records-body"></div>
+  </div>
+</div>
+
+<!-- 新增標記表單 -->
+<div id="marker-form-modal">
+  <div class="modal-inner">
+    <div class="modal-head">
+      <h2>新增疼痛標記</h2>
+      <button class="modal-close" id="form-close">✕</button>
+    </div>
+    <div style="padding: 18px 0 8px;">
+      <div class="form-field">
+        <label class="form-label">部位名稱</label>
+        <input class="form-input" id="form-name" placeholder="例:右肩胛內側">
+      </div>
+      <div class="form-field">
+        <label class="form-label" id="form-attached-label" style="color:var(--text-muted)"></label>
+      </div>
+      <div class="form-field">
+        <label class="form-label">疼痛分數 (VAS 0–10)</label>
+      </div>
+      <div class="vas-row">
+        <input type="range" id="vas-slider" min="0" max="10" value="5">
+        <span id="vas-value">5</span>
+      </div>
+      <div class="form-field">
+        <label class="form-label">文字紀錄</label>
+        <textarea class="form-textarea" id="form-note" placeholder="出現情境、誘發動作、改善前後感受…"></textarea>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="form-btn" id="form-cancel">取消</button>
+      <button class="form-btn primary" id="form-save">儲存</button>
+    </div>
+  </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+
+// ============================================
+// Latin → 中文對照(常見肌肉)
+// 可持續擴充,fallback 顯示原始名稱
+// ============================================
+const NAME_MAP = {
+  // 頸 / 上背
+  'trapezius': { zh: '斜方肌', desc: '頸肩淺層大肌肉,膏肓附近第一線。' },
+  'sternocleidomastoid': { zh: '胸鎖乳突肌' },
+  'sternocleidomastoideus': { zh: '胸鎖乳突肌' },
+  'scalenus anterior': { zh: '前斜角肌', desc: '壓迫臂神經叢與鎖骨下動脈的常見元兇。' },
+  'scalenus medius': { zh: '中斜角肌', desc: '背肩胛神經穿過此肌,緊繃會引發膏肓深層悶痛。' },
+  'scalenus posterior': { zh: '後斜角肌' },
+  'levator scapulae': { zh: '肩胛提肌', desc: '受背肩胛神經支配,神經被勒住時慢性發炎。' },
+  'rhomboideus major': { zh: '大菱形肌', desc: '受背肩胛神經支配。' },
+  'rhomboideus minor': { zh: '小菱形肌', desc: '受背肩胛神經支配。' },
+  'splenius capitis': { zh: '頭夾肌' },
+  'splenius cervicis': { zh: '頸夾肌' },
+  'semispinalis capitis': { zh: '頭半棘肌' },
+  'semispinalis cervicis': { zh: '頸半棘肌' },
+  'longissimus': { zh: '最長肌' },
+  'longus colli': { zh: '頸長肌' },
+  'longus capitis': { zh: '頭長肌' },
+  'omohyoideus': { zh: '肩胛舌骨肌', desc: '深層肩頸肌,緊繃影響呼吸與吞嚥。' },
+  'omohyoid': { zh: '肩胛舌骨肌' },
+
+  // 肩 / 上臂
+  'deltoideus': { zh: '三角肌' },
+  'supraspinatus': { zh: '棘上肌' },
+  'infraspinatus': { zh: '棘下肌' },
+  'teres major': { zh: '大圓肌' },
+  'teres minor': { zh: '小圓肌' },
+  'subscapularis': { zh: '肩胛下肌' },
+  'biceps brachii': { zh: '肱二頭肌' },
+  'triceps brachii': { zh: '肱三頭肌' },
+  'brachialis': { zh: '肱肌' },
+  'brachioradialis': { zh: '肱橈肌' },
+
+  // 胸 / 軀幹
+  'pectoralis major': { zh: '胸大肌' },
+  'pectoralis minor': { zh: '胸小肌' },
+  'serratus anterior': { zh: '前鋸肌' },
+  'latissimus dorsi': { zh: '闊背肌' },
+  'erector spinae': { zh: '豎脊肌群' },
+  'rectus abdominis': { zh: '腹直肌' },
+  'obliquus externus': { zh: '腹外斜肌' },
+  'obliquus internus': { zh: '腹內斜肌' },
+  'transversus abdominis': { zh: '腹橫肌' },
+  'diaphragma': { zh: '橫膈膜' },
+  'iliopsoas': { zh: '髂腰肌' },
+
+  // 下肢
+  'gluteus maximus': { zh: '臀大肌' },
+  'gluteus medius': { zh: '臀中肌' },
+  'gluteus minimus': { zh: '臀小肌' },
+  'piriformis': { zh: '梨狀肌' },
+  'tensor fasciae latae': { zh: '闊筋膜張肌' },
+  'rectus femoris': { zh: '股直肌' },
+  'vastus lateralis': { zh: '股外側肌' },
+  'vastus medialis': { zh: '股內側肌' },
+  'vastus intermedius': { zh: '股中間肌' },
+  'biceps femoris': { zh: '股二頭肌' },
+  'semitendinosus': { zh: '半腱肌' },
+  'semimembranosus': { zh: '半膜肌' },
+  'sartorius': { zh: '縫匠肌' },
+  'gracilis': { zh: '股薄肌' },
+  'adductor longus': { zh: '內收長肌' },
+  'adductor brevis': { zh: '內收短肌' },
+  'adductor magnus': { zh: '內收大肌' },
+  'gastrocnemius': { zh: '腓腸肌' },
+  'soleus': { zh: '比目魚肌' },
+  'tibialis anterior': { zh: '脛前肌' },
+};
+
+function lookupName(rawName) {
+  if (!rawName) return { zh: '未命名', latin: '' };
+  // 移除 Musculus 前綴、處理多餘空白
+  let clean = rawName
+    .replace(/^Musculus\s+/i, '')
+    .replace(/\(.*\)/g, '')
+    .replace(/[_\-\.]/g, ' ')
+    .trim()
+    .toLowerCase();
+
+  // 找最長匹配的 key
+  let best = null;
+  for (const key of Object.keys(NAME_MAP)) {
+    if (clean.includes(key)) {
+      if (!best || key.length > best.length) best = key;
+    }
+  }
+  if (best) {
+    return { zh: NAME_MAP[best].zh, latin: rawName, desc: NAME_MAP[best].desc || '' };
+  }
+  return { zh: rawName, latin: rawName, desc: '' };
+}
+
+// 分區判斷(用於 Lexicon 樹狀分組)
+const REGION_RULES = [
+  { name: '頸部 Cervical', keys: ['scalen', 'sternocleido', 'splenius', 'longus colli', 'longus capitis', 'omohyo', 'semispinalis', 'platysma'] },
+  { name: '肩 / 上背 Shoulder & Upper Back', keys: ['trapezius', 'rhomboid', 'levator scap', 'supraspin', 'infraspin', 'teres', 'subscapularis', 'deltoid', 'latissimus'] },
+  { name: '胸 / 軀幹 Chest & Trunk', keys: ['pectoralis', 'serratus', 'erector spin', 'rectus abdom', 'obliquus', 'transversus abdom', 'diaphragma', 'intercost'] },
+  { name: '上臂 / 前臂 Arm', keys: ['biceps brachii', 'triceps brachii', 'brachialis', 'brachioradialis', 'flexor', 'extensor', 'pronator', 'supinator'] },
+  { name: '臀 / 髖 Hip', keys: ['gluteus', 'piriformis', 'tensor fasc', 'iliopsoas', 'iliacus', 'psoas'] },
+  { name: '大腿 Thigh', keys: ['rectus femoris', 'vastus', 'biceps femoris', 'semitendinosus', 'semimembranosus', 'sartorius', 'gracilis', 'adductor'] },
+  { name: '小腿 / 足 Leg & Foot', keys: ['gastrocnemius', 'soleus', 'tibialis', 'peroneus', 'fibularis', 'plantaris'] },
+  { name: '頭 / 臉 Head & Face', keys: ['masseter', 'temporalis', 'orbicularis', 'frontalis', 'occipitalis', 'pterygoid', 'mentalis', 'zygomaticus'] },
+  { name: '其他 Other', keys: [] },  // fallback
+];
+
+function categorizeMesh(name) {
+  const n = name.toLowerCase();
+  for (const r of REGION_RULES) {
+    if (r.keys.some(k => n.includes(k))) return r.name;
+  }
+  return '其他 Other';
+}
+
+// ============================================
+// Z-Anatomy 原生分區(從 .glb 階層偵測)
+// ============================================
+const ZA_REGION_TRANSLATIONS = {
+  'cranial part of muscular system': '頭部 Cranial',
+  'cervical part of muscular system': '頸部 Cervical',
+  'dorsal part of muscular system': '背部 Dorsal',
+  'thoracic part of muscular system': '胸部 Thoracic',
+  'abdominal part of muscular system': '腹部 Abdominal',
+  'pelvic part of muscular system': '骨盆 Pelvic',
+  'muscular system of upper limb': '上肢 Upper limb',
+  'muscular system of lower limb': '下肢 Lower limb',
+  'muscles': '肌肉群 Muscles',
+  'synovial bursae': '滑液囊 Synovial bursae',
+  'tendon sheaths': '腱鞘 Tendon sheaths',
+  'muscular insertions': '肌肉附著點 Insertions',
+};
+
+// 顯示順序:由上到下(頭→腳)
+const ZA_REGION_ORDER = [
+  '頭部 Cranial',
+  '頸部 Cervical',
+  '背部 Dorsal',
+  '胸部 Thoracic',
+  '腹部 Abdominal',
+  '骨盆 Pelvic',
+  '上肢 Upper limb',
+  '下肢 Lower limb',
+  '肌肉附著點 Insertions',
+  '滑液囊 Synovial bursae',
+  '腱鞘 Tendon sheaths',
+];
+
+function translateRegionName(rawName) {
+  const key = rawName
+    .toLowerCase()
+    .replace(/[_\-\.]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return ZA_REGION_TRANSLATIONS[key] || rawName;
+}
+
+// 從場景階層偵測分區:跳過單一容器,找到第一層有多個命名子節點的位置
+function detectRegionsFromHierarchy(root) {
+  let node = root;
+  // 跳過只有一個 group 子節點的容器層
+  let safety = 10;
+  while (safety-- > 0 && node.children && node.children.length === 1 && !node.children[0].isMesh) {
+    node = node.children[0];
+  }
+  const regions = {};
+  if (!node.children) return regions;
+  node.children.forEach((child) => {
+    if (child.isMesh) return;
+    if (!child.name) return;
+    const meshes = [];
+    child.traverse((o) => { if (o.isMesh) meshes.push(o); });
+    if (meshes.length > 0) regions[child.name] = meshes;
+  });
+  return regions;
+}
+
+// 印出場景階層(debug 用,看 console 確認 .glb 結構)
+function printSceneHierarchy(node, depth = 0, maxDepth = 3) {
+  if (depth > maxDepth) return;
+  const indent = '  '.repeat(depth);
+  const kind = node.isMesh ? '🟥mesh' : '📁group';
+  const childCount = node.children ? node.children.length : 0;
+  console.log(`${indent}${kind} "${node.name || '(unnamed)'}" (${childCount} children)`);
+  if (node.children) node.children.forEach(c => printSceneHierarchy(c, depth + 1, maxDepth));
+}
+
+// ============================================
+// 場景設定
+// ============================================
+const container = document.getElementById('canvas-container');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0e0f12);
+const camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.01, 200);
+camera.position.set(0, 0, 5);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+container.appendChild(renderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+
+// 燈光
+scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+const keyLight = new THREE.DirectionalLight(0xffffff, 0.85);
+keyLight.position.set(3, 6, 4);
+scene.add(keyLight);
+const rimLight = new THREE.DirectionalLight(0x6fa8dc, 0.3);
+rimLight.position.set(-3, 3, -4);
+scene.add(rimLight);
+const fillLight = new THREE.DirectionalLight(0xffffff, 0.25);
+fillLight.position.set(0, -2, 2);
+scene.add(fillLight);
+
+// 預設視角(載入後會自動調整)
+let defaultCameraPos = new THREE.Vector3(0, 0, 5);
+let defaultTarget = new THREE.Vector3(0, 0, 0);
+
+// 模型狀態
+let modelRoot = null;
+const muscleMeshes = []; // 所有可點選的肌肉
+const regionGroups = {}; // 分區索引 { regionName: [mesh, ...] }
+
+// ============================================
+// 載入 GLB
+// ============================================
+const loader = new GLTFLoader();
+
+// Draco 解壓縮(Blender 匯出時若勾了 Compression 就需要)
+const dracoLoader = new DRACOLoader();
+dracoLoader.setDecoderPath('https://unpkg.com/three@0.160.0/examples/jsm/libs/draco/');
+dracoLoader.setDecoderConfig({ type: 'js' });
+loader.setDRACOLoader(dracoLoader);
+
+// Meshopt 解壓縮(額外支援另一種常見壓縮格式)
+loader.setMeshoptDecoder(MeshoptDecoder);
+const loadingEl = document.getElementById('loading');
+const loadingFill = document.getElementById('loading-fill');
+const loadingPct = document.getElementById('loading-pct');
+const loadingText = loadingEl.querySelector('.loading-text');
+const fileDrop = document.getElementById('file-drop');
+const fileInput = document.getElementById('file-input');
+
+// 嘗試自動載入(從同目錄)
+const AUTO_PATHS = ['./4_-muscular-system.glb', './muscular-system.glb', './model.glb'];
+
+async function tryAutoLoad() {
+  for (const path of AUTO_PATHS) {
+    try {
+      const res = await fetch(path, { method: 'HEAD' });
+      if (res.ok) {
+        loadingText.textContent = '載入解剖模型中';
+        loadingPct.textContent = '0%';
+        loader.load(
+          path,
+          onModelLoaded,
+          (e) => updateProgress(e.loaded, e.total),
+          (err) => { console.error(err); showFileDrop(); }
+        );
+        return true;
+      }
+    } catch (e) { /* try next */ }
+  }
+  return false;
+}
+
+function updateProgress(loaded, total) {
+  if (total > 0) {
+    const pct = (loaded / total) * 100;
+    loadingFill.style.width = pct + '%';
+    loadingPct.textContent = `${pct.toFixed(0)}%  (${(loaded/1024/1024).toFixed(1)} MB)`;
+  } else {
+    loadingPct.textContent = `${(loaded/1024/1024).toFixed(1)} MB`;
+  }
+}
+
+function showFileDrop() {
+  loadingText.textContent = '請載入解剖模型';
+  loadingPct.textContent = '';
+}
+
+// 檔案選擇器
+fileInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (file) loadFromFile(file);
+});
+
+// 拖曳載入
+fileDrop.addEventListener('dragover', (e) => {
+  e.preventDefault(); fileDrop.classList.add('dragover');
+});
+fileDrop.addEventListener('dragleave', () => fileDrop.classList.remove('dragover'));
+fileDrop.addEventListener('drop', (e) => {
+  e.preventDefault(); fileDrop.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) loadFromFile(file);
+});
+
+function loadFromFile(file) {
+  loadingText.textContent = '載入中';
+  fileDrop.style.display = 'none';
+  document.querySelector('.loading-hint').style.display = 'none';
+  const url = URL.createObjectURL(file);
+  loader.load(url, onModelLoaded, (e) => updateProgress(e.loaded, e.total),
+    (err) => { console.error(err); alert('載入失敗:' + err.message); });
+}
+
+// ============================================
+// 模型載入完成
+// ============================================
+function onModelLoaded(gltf) {
+  modelRoot = gltf.scene;
+
+  // 居中 + 縮放到合適大小
+  const box = new THREE.Box3().setFromObject(modelRoot);
+  const center = box.getCenter(new THREE.Vector3());
+  const size = box.getSize(new THREE.Vector3());
+  modelRoot.position.sub(center);
+  // 統一縮放到約 4 單位高度
+  const targetHeight = 4;
+  const scale = targetHeight / size.y;
+  modelRoot.scale.setScalar(scale);
+
+  scene.add(modelRoot);
+
+  // 收集所有 mesh
+  modelRoot.traverse((obj) => {
+    if (!obj.isMesh) return;
+    // 把材質 clone 一份,避免共用造成高亮串味
+    obj.material = Array.isArray(obj.material)
+      ? obj.material.map(m => m.clone())
+      : obj.material.clone();
+    obj.material.transparent = true;
+    obj.material.opacity = 1;
+    obj.userData.originalOpacity = 1;
+    obj.userData.originalEmissive = obj.material.emissive
+      ? obj.material.emissive.clone() : new THREE.Color(0x000000);
+    muscleMeshes.push(obj);
+  });
+
+  // === 分區:優先用 Z-Anatomy 原生階層,失敗才退回關鍵字 ===
+  console.log('[App] 場景階層:');
+  printSceneHierarchy(modelRoot, 0, 3);
+  const detected = detectRegionsFromHierarchy(modelRoot);
+  console.log('[App] 偵測到的分區:', Object.keys(detected));
+
+  if (Object.keys(detected).length > 1) {
+    // 用 Z-Anatomy 原生分區
+    Object.entries(detected).forEach(([rawName, meshes]) => {
+      const name = translateRegionName(rawName);
+      regionGroups[name] = meshes;
+      meshes.forEach(m => { m.userData.region = name; });
+    });
+    // 處理沒被分到的零散 mesh
+    const inGroup = new Set();
+    Object.values(regionGroups).forEach(arr => arr.forEach(m => inGroup.add(m)));
+    const orphans = muscleMeshes.filter(m => !inGroup.has(m));
+    if (orphans.length > 0) {
+      regionGroups['其他 Other'] = orphans;
+      orphans.forEach(m => { m.userData.region = '其他 Other'; });
+    }
+  } else {
+    // Fallback:關鍵字分區
+    console.warn('[App] 沒偵測到原生分區,改用關鍵字 fallback');
+    muscleMeshes.forEach(obj => {
+      const region = categorizeMesh(obj.name);
+      if (!regionGroups[region]) regionGroups[region] = [];
+      regionGroups[region].push(obj);
+      obj.userData.region = region;
+    });
+  }
+
+  // 調整相機到合適距離
+  const newBox = new THREE.Box3().setFromObject(modelRoot);
+  const newSize = newBox.getSize(new THREE.Vector3());
+  const maxDim = Math.max(newSize.x, newSize.y, newSize.z);
+  defaultCameraPos.set(0, 0, maxDim * 1.6);
+  defaultTarget.set(0, 0, 0);
+  camera.position.copy(defaultCameraPos);
+  controls.target.copy(defaultTarget);
+  controls.update();
+
+  // 更新狀態列
+  document.getElementById('subtitle').textContent =
+    `已載入 ${muscleMeshes.length} 個結構 · ${Object.keys(regionGroups).length} 個分區`;
+
+  // 建構 Lexicon 樹
+  buildLexiconTree();
+
+  // 載入紀錄(預設疼痛點)
+  renderCustomMarkers();
+
+  // 關閉 loading
+  loadingEl.style.display = 'none';
+}
+
+// ============================================
+// Lexicon 樹
+// ============================================
+const lexTree = document.getElementById('lex-tree');
+let allLexItems = []; // 用於搜尋
+
+function buildLexiconTree() {
+  lexTree.innerHTML = '';
+  allLexItems = [];
+
+  // 依 Z-Anatomy 解剖順序排列,未匹配的(fallback 區或其他)放後面
+  const inZAOrder = ZA_REGION_ORDER.filter(n => regionGroups[n]);
+  const fallbackOrder = REGION_RULES.map(r => r.name).filter(n => regionGroups[n]);
+  const seen = new Set([...inZAOrder, ...fallbackOrder]);
+  const others = Object.keys(regionGroups).filter(n => !seen.has(n));
+  const orderedRegions = [...inZAOrder, ...fallbackOrder, ...others];
+
+  orderedRegions.forEach(regionName => {
+    const meshes = regionGroups[regionName];
+    if (!meshes || meshes.length === 0) return;
+
+    const groupEl = document.createElement('div');
+    groupEl.className = 'lex-group';
+
+    // 初始化分區透明度
+    if (regionOpacity[regionName] === undefined) regionOpacity[regionName] = 1;
+
+    const headEl = document.createElement('div');
+    headEl.className = 'lex-group-head';
+    headEl.innerHTML = `
+      <span class="lex-group-eye" title="顯示/隱藏">●</span>
+      <span class="lex-group-title">${regionName}</span>
+      <input type="range" class="lex-group-slider" min="0" max="100" value="100" title="透明度">
+      <span class="lex-group-count">${meshes.length}</span>
+    `;
+    groupEl.appendChild(headEl);
+
+    // 拉霸:不要冒泡到 group head 的展開/收合
+    const slider = headEl.querySelector('.lex-group-slider');
+    const eye = headEl.querySelector('.lex-group-eye');
+    let lastValue = 100;  // 用於眼睛點擊時的還原值
+
+    slider.addEventListener('input', (e) => {
+      e.stopPropagation();
+      const v = parseInt(slider.value) / 100;
+      regionOpacity[regionName] = v;
+      eye.classList.toggle('off', v < 0.05);
+      if (v > 0) lastValue = parseInt(slider.value);
+      applyOpacities();
+    });
+    slider.addEventListener('click', (e) => e.stopPropagation());
+    slider.addEventListener('pointerdown', (e) => e.stopPropagation());
+
+    eye.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (regionOpacity[regionName] > 0) {
+        // 隱藏
+        slider.value = 0;
+        regionOpacity[regionName] = 0;
+        eye.classList.add('off');
+      } else {
+        // 還原
+        slider.value = lastValue || 100;
+        regionOpacity[regionName] = lastValue / 100;
+        eye.classList.remove('off');
+      }
+      applyOpacities();
+    });
+
+    const itemsEl = document.createElement('div');
+    itemsEl.className = 'lex-group-items';
+
+    // 對名稱去重(同個肌肉左右會出現兩次,但其實 mesh 不同)
+    const sorted = meshes.slice().sort((a, b) => a.name.localeCompare(b.name));
+    sorted.forEach(mesh => {
+      const info = lookupName(mesh.name);
+      const item = document.createElement('div');
+      item.className = 'lex-item';
+      item.innerHTML = `
+        <div>${info.zh}</div>
+        <div class="lex-item-latin">${info.latin}</div>
+      `;
+      item.addEventListener('click', () => focusMesh(mesh));
+      item._info = { mesh, zh: info.zh, latin: info.latin };
+      itemsEl.appendChild(item);
+      allLexItems.push(item);
+    });
+
+    groupEl.appendChild(itemsEl);
+    headEl.addEventListener('click', () => groupEl.classList.toggle('open'));
+    lexTree.appendChild(groupEl);
+  });
+
+  // 預設展開第一個
+  const firstGroup = lexTree.querySelector('.lex-group');
+  if (firstGroup) firstGroup.classList.add('open');
+}
+
+// 搜尋
+document.getElementById('lex-search').addEventListener('input', (e) => {
+  const q = e.target.value.trim().toLowerCase();
+  if (!q) {
+    allLexItems.forEach(it => it.style.display = '');
+    lexTree.querySelectorAll('.lex-group').forEach(g => g.classList.remove('search-mode'));
+    return;
+  }
+  let anyMatch = false;
+  allLexItems.forEach(it => {
+    const info = it._info;
+    const match = info.zh.toLowerCase().includes(q) || info.latin.toLowerCase().includes(q);
+    it.style.display = match ? '' : 'none';
+    if (match) anyMatch = true;
+  });
+  // 自動展開有匹配的群
+  lexTree.querySelectorAll('.lex-group').forEach(g => {
+    const visible = [...g.querySelectorAll('.lex-item')].some(i => i.style.display !== 'none');
+    g.classList.toggle('open', visible);
+  });
+});
+
+// ============================================
+// 高亮系統 + 分區透明度
+// ============================================
+let highlighted = null;
+const regionOpacity = {}; // regionName -> 0..1,預設 1
+
+function applyOpacities() {
+  muscleMeshes.forEach(m => {
+    const region = m.userData.region || '其他 Other';
+    const base = regionOpacity[region] !== undefined ? regionOpacity[region] : 1;
+    let op;
+    if (highlighted) {
+      op = (m === highlighted) ? 1 : Math.min(base, 0.15);
+    } else {
+      op = base;
+    }
+    m.material.opacity = op;
+    m.visible = op > 0.005;
+  });
+}
+
+function highlightMesh(mesh, options = {}) {
+  // 還原 emissive
+  muscleMeshes.forEach(m => {
+    if (m.material.emissive) m.material.emissive.copy(m.userData.originalEmissive);
+  });
+
+  highlighted = mesh;
+
+  if (mesh && mesh.material.emissive) {
+    mesh.material.emissive.setHex(0xff6644);
+  }
+
+  applyOpacities();
+
+  // Lex 列表 active 狀態
+  allLexItems.forEach(it => {
+    it.classList.toggle('active', mesh && it._info.mesh === mesh);
+  });
+
+  if (!mesh) { updateChip(null); return; }
+
+  const info = lookupName(mesh.name);
+  updateChip(info);
+  showMuscleInfo(info, mesh);
+
+  if (options.flyTo) flyToMesh(mesh);
+}
+
+function focusMesh(mesh) {
+  highlightMesh(mesh, { flyTo: true });
+  // 收起 Lex 面板
+  if (window.innerWidth < 700) lexiconPanel.classList.remove('open');
+}
+
+function flyToMesh(mesh) {
+  const box = new THREE.Box3().setFromObject(mesh);
+  const center = box.getCenter(new THREE.Vector3());
+  const size = box.getSize(new THREE.Vector3());
+  const maxDim = Math.max(size.x, size.y, size.z);
+  // 沿著相機到中心的方向退到合適距離
+  const dir = new THREE.Vector3().subVectors(camera.position, controls.target).normalize();
+  const dist = Math.max(maxDim * 4, 1.0);
+  const newPos = center.clone().add(dir.multiplyScalar(dist));
+  animateCamera(newPos, center, 600);
+}
+
+function animateCamera(toPos, toTarget, dur) {
+  const fromPos = camera.position.clone();
+  const fromTarget = controls.target.clone();
+  const t0 = performance.now();
+  function step() {
+    const t = Math.min((performance.now() - t0) / dur, 1);
+    const e = t < 0.5 ? 2*t*t : -1 + (4-2*t)*t;  // easeInOut
+    camera.position.lerpVectors(fromPos, toPos, e);
+    controls.target.lerpVectors(fromTarget, toTarget, e);
+    controls.update();
+    if (t < 1) requestAnimationFrame(step);
+  }
+  step();
+}
+
+// 浮動 chip
+const chip = document.getElementById('current-chip');
+function updateChip(info) {
+  if (!info) { chip.classList.remove('show'); return; }
+  document.getElementById('chip-name').textContent = info.zh;
+  document.getElementById('chip-latin').textContent = info.latin;
+  chip.classList.add('show');
+}
+
+// ============================================
+// 點擊互動 + 標記模式
+// ============================================
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+let markMode = false;
+let pendingMarker = null;
+
+let pointerDownPos = null;
+renderer.domElement.addEventListener('pointerdown', (e) => {
+  pointerDownPos = { x: e.clientX, y: e.clientY };
+});
+renderer.domElement.addEventListener('pointerup', (e) => {
+  if (!pointerDownPos) return;
+  const dx = e.clientX - pointerDownPos.x;
+  const dy = e.clientY - pointerDownPos.y;
+  if (Math.sqrt(dx*dx + dy*dy) > 6) return; // 拖曳就不算點擊
+
+  const rect = renderer.domElement.getBoundingClientRect();
+  pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+  raycaster.setFromCamera(pointer, camera);
+
+  if (markMode) {
+    // 標記模式:取得擊中的點
+    const hits = raycaster.intersectObjects(muscleMeshes);
+    if (hits.length > 0) {
+      pendingMarker = {
+        position: hits[0].point.clone(),
+        muscleName: hits[0].object.name,
+        muscleInfo: lookupName(hits[0].object.name)
+      };
+      openMarkerForm();
+    }
+    return;
+  }
+
+  // 一般模式:檢查標記點 → 肌肉
+  const markerHits = raycaster.intersectObjects(painPointsGroup.children);
+  if (markerHits.length > 0) {
+    let obj = markerHits[0].object;
+    if (obj.userData.type === 'painPointRing') obj = obj.userData.parent;
+    if (obj.userData.type === 'painPoint') {
+      showCustomInfo(obj.userData.data);
+      return;
+    }
+  }
+
+  const muscleHits = raycaster.intersectObjects(muscleMeshes);
+  if (muscleHits.length > 0) {
+    highlightMesh(muscleHits[0].object);
+  } else {
+    highlightMesh(null);
+  }
+});
+
+// ============================================
+// 資訊面板
+// ============================================
+const infoPanel = document.getElementById('info-panel');
+const infoBody = document.getElementById('info-body');
+const infoHandle = document.getElementById('info-handle');
+const infoHandleLabel = document.getElementById('info-handle-label');
+
+infoHandle.addEventListener('click', () => infoPanel.classList.toggle('expanded'));
+
+function showMuscleInfo(info, mesh) {
+  infoHandleLabel.textContent = '肌肉資訊';
+  infoBody.innerHTML = `
+    <h1 class="info-title">${info.zh}</h1>
+    <p class="info-latin">${info.latin}</p>
+    ${info.desc ? `
+      <div class="info-section">
+        <div class="info-section-label">臨床備註</div>
+        <div class="info-section-text">${info.desc}</div>
+      </div>` : ''}
+    <div class="info-action-row">
+      <button class="info-action" id="info-mark-here">在此標記疼痛</button>
+    </div>
+  `;
+  infoPanel.classList.add('expanded');
+  document.getElementById('info-mark-here').addEventListener('click', () => {
+    // 自動進入標記模式並把這塊肌肉作為候選
+    const box = new THREE.Box3().setFromObject(mesh);
+    const center = box.getCenter(new THREE.Vector3());
+    pendingMarker = {
+      position: center,
+      muscleName: mesh.name,
+      muscleInfo: info
+    };
+    openMarkerForm();
+  });
+}
+
+function showCustomInfo(rec) {
+  infoHandleLabel.textContent = '個人紀錄';
+  infoBody.innerHTML = `
+    <h1 class="info-title">${rec.name}</h1>
+    <p class="info-latin">VAS ${rec.vas} · ${new Date(rec.timestamp).toLocaleString('zh-TW')}</p>
+    ${rec.attachedMuscle ? `
+      <div class="info-section">
+        <div class="info-section-label">附著肌肉</div>
+        <div class="info-section-text">${rec.attachedMuscle}</div>
+      </div>` : ''}
+    <div class="info-section">
+      <div class="info-section-label">紀錄</div>
+      <div class="info-section-text">${rec.note || '(無備註)'}</div>
+    </div>
+  `;
+  infoPanel.classList.add('expanded');
+}
+
+// ============================================
+// 標記系統(localStorage)
+// ============================================
+const STORAGE_KEY = 'muscle-app-records-v2';
+const painPointsGroup = new THREE.Group();
+scene.add(painPointsGroup);
+
+function loadRecords() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) { return []; }
+}
+function saveRecords(records) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(records)); }
+  catch (e) { console.warn(e); }
+}
+
+function addRecord(rec) {
+  const recs = loadRecords();
+  recs.unshift(rec);
+  saveRecords(recs);
+  renderCustomMarkers();
+}
+
+function deleteRecord(id) {
+  saveRecords(loadRecords().filter(r => r.id !== id));
+  renderCustomMarkers();
+  renderRecordsList();
+}
+
+function renderCustomMarkers() {
+  // 清掉舊的
+  while (painPointsGroup.children.length > 0) {
+    painPointsGroup.remove(painPointsGroup.children[0]);
+  }
+  loadRecords().forEach(rec => createPainPointMesh(rec));
+}
+
+function createPainPointMesh(rec) {
+  const ringGeom = new THREE.RingGeometry(0.04, 0.06, 32);
+  const ringMat = new THREE.MeshBasicMaterial({
+    color: 0xff4444, transparent: true, opacity: 0.5, side: THREE.DoubleSide,
+    depthTest: false
+  });
+  const ring = new THREE.Mesh(ringGeom, ringMat);
+  ring.position.set(rec.x, rec.y, rec.z);
+  ring.lookAt(rec.x * 2, rec.y * 2, rec.z * 2);
+  ring.renderOrder = 999;
+
+  const coreGeom = new THREE.SphereGeometry(0.025, 16, 16);
+  const coreMat = new THREE.MeshBasicMaterial({ color: 0xff3333, depthTest: false });
+  const core = new THREE.Mesh(coreGeom, coreMat);
+  core.position.copy(ring.position);
+  core.renderOrder = 1000;
+  core.userData = { type: 'painPoint', data: rec, ring };
+  ring.userData = { type: 'painPointRing', parent: core };
+
+  painPointsGroup.add(ring);
+  painPointsGroup.add(core);
+}
+
+// ============================================
+// 標記表單
+// ============================================
+const markBtn = document.getElementById('btn-mark');
+const markHint = document.getElementById('mark-mode-hint');
+const formModal = document.getElementById('marker-form-modal');
+const vasSlider = document.getElementById('vas-slider');
+const vasValue = document.getElementById('vas-value');
+const formName = document.getElementById('form-name');
+const formNote = document.getElementById('form-note');
+const formAttachedLabel = document.getElementById('form-attached-label');
+
+markBtn.addEventListener('click', () => {
+  markMode = !markMode;
+  markBtn.classList.toggle('active', markMode);
+  markHint.classList.toggle('show', markMode);
+});
+
+vasSlider.addEventListener('input', () => vasValue.textContent = vasSlider.value);
+
+function openMarkerForm() {
+  formName.value = pendingMarker?.muscleInfo?.zh || '';
+  formNote.value = '';
+  vasSlider.value = 5;
+  vasValue.textContent = '5';
+  formAttachedLabel.textContent = pendingMarker?.muscleInfo
+    ? `附著肌肉:${pendingMarker.muscleInfo.zh} (${pendingMarker.muscleInfo.latin})` : '';
+  formModal.classList.add('open');
+}
+function closeMarkerForm() {
+  formModal.classList.remove('open');
+  pendingMarker = null;
+}
+
+document.getElementById('form-close').addEventListener('click', closeMarkerForm);
+document.getElementById('form-cancel').addEventListener('click', closeMarkerForm);
+document.getElementById('form-save').addEventListener('click', () => {
+  if (!pendingMarker) return;
+  const rec = {
+    id: 'rec-' + Date.now(),
+    name: formName.value.trim() || pendingMarker.muscleInfo.zh || '未命名標記',
+    vas: parseInt(vasSlider.value),
+    note: formNote.value.trim(),
+    attachedMuscle: pendingMarker.muscleInfo
+      ? `${pendingMarker.muscleInfo.zh} (${pendingMarker.muscleInfo.latin})` : '',
+    timestamp: Date.now(),
+    x: pendingMarker.position.x,
+    y: pendingMarker.position.y,
+    z: pendingMarker.position.z
+  };
+  addRecord(rec);
+  closeMarkerForm();
+  markMode = false;
+  markBtn.classList.remove('active');
+  markHint.classList.remove('show');
+});
+
+// ============================================
+// 紀錄列表
+// ============================================
+const recordsModal = document.getElementById('records-modal');
+const recordsBody = document.getElementById('records-body');
+
+document.getElementById('btn-records').addEventListener('click', () => {
+  renderRecordsList();
+  recordsModal.classList.add('open');
+});
+document.getElementById('records-close').addEventListener('click', () => {
+  recordsModal.classList.remove('open');
+});
+
+function renderRecordsList() {
+  const records = loadRecords();
+  if (records.length === 0) {
+    recordsBody.innerHTML = `<div class="empty-records">尚無紀錄<br><br>點右上 ＋ 按鈕進入標記模式,<br>在身體上點選位置即可新增。</div>`;
+    return;
+  }
+  recordsBody.innerHTML = records.map(r => `
+    <div class="record-item" data-id="${r.id}">
+      <div class="record-row">
+        <span class="record-name">${r.name}</span>
+        <span class="record-vas">VAS ${r.vas}</span>
+      </div>
+      ${r.attachedMuscle ? `<div class="record-note" style="color:var(--text-muted)">${r.attachedMuscle}</div>` : ''}
+      ${r.note ? `<div class="record-note">${r.note}</div>` : ''}
+      <div class="record-date">${new Date(r.timestamp).toLocaleString('zh-TW')}</div>
+      <button class="record-delete" data-id="${r.id}">刪除</button>
+    </div>
+  `).join('');
+  recordsBody.querySelectorAll('.record-item').forEach(el => {
+    el.addEventListener('click', (e) => {
+      if (e.target.classList.contains('record-delete')) return;
+      const id = el.dataset.id;
+      const rec = loadRecords().find(r => r.id === id);
+      if (rec) {
+        showCustomInfo(rec);
+        recordsModal.classList.remove('open');
+        const target = new THREE.Vector3(rec.x, rec.y, rec.z);
+        animateCamera(
+          target.clone().add(new THREE.Vector3(0, 0, 2)),
+          target, 500
+        );
+      }
+    });
+  });
+  recordsBody.querySelectorAll('.record-delete').forEach(b => {
+    b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (confirm('確定刪除這筆紀錄?')) deleteRecord(b.dataset.id);
+    });
+  });
+}
+
+// ============================================
+// Lexicon 開關
+// ============================================
+const lexiconPanel = document.getElementById('lexicon-panel');
+document.getElementById('btn-lexicon').addEventListener('click', () => {
+  lexiconPanel.classList.toggle('open');
+});
+document.getElementById('lex-close').addEventListener('click', () => {
+  lexiconPanel.classList.remove('open');
+});
+
+// ============================================
+// 重置視角
+// ============================================
+document.getElementById('btn-reset').addEventListener('click', () => {
+  animateCamera(defaultCameraPos.clone(), defaultTarget.clone(), 500);
+  highlightMesh(null);
+});
+
+// ============================================
+// 動畫
+// ============================================
+let t = 0;
+function animate() {
+  requestAnimationFrame(animate);
+  t += 0.02;
+  painPointsGroup.children.forEach(c => {
+    if (c.userData.type === 'painPointRing') {
+      const s = 1 + Math.sin(t * 2) * 0.2;
+      c.scale.setScalar(s);
+      c.material.opacity = 0.3 + Math.sin(t * 2) * 0.2;
+    }
+  });
+  controls.update();
+  renderer.render(scene, camera);
+}
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+animate();
+
+// 啟動:嘗試自動載入,失敗就讓使用者選檔
+tryAutoLoad().then((ok) => { if (!ok) showFileDrop(); });
+
+// ============================================
+// Service Worker 註冊(PWA / 離線支援)
+// ============================================
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js')
+      .then(reg => console.log('[PWA] SW registered:', reg.scope))
+      .catch(err => console.warn('[PWA] SW registration failed:', err));
+  });
+}
+
+</script>
+</body>
+</html>
