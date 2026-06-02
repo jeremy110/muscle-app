@@ -208,6 +208,333 @@
   @media (max-width: 480px) {
     #lexicon-panel { width: 100%; }
   }
+
+  /* === 症狀對照側欄(沿用 Lexicon 樣式) === */
+  #symptoms-panel {
+    position: absolute;
+    top: 0; right: 0; bottom: 0; width: 380px;
+    z-index: 15;
+    background: var(--bg-panel-solid);
+    border-left: 1px solid var(--border);
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.2, 0.9, 0.3, 1);
+    display: flex; flex-direction: column;
+  }
+  #symptoms-panel.open { transform: translateX(0); }
+  @media (max-width: 480px) {
+    #symptoms-panel { width: 100%; }
+  }
+  #symptoms-tree { flex: 1; overflow-y: auto; padding: 4px 0 24px; }
+  .sym-item {
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+  }
+  .sym-item:hover { background: rgba(255,255,255,0.03); }
+  .sym-item-muscle {
+    font-size: 14px; font-weight: 500; margin-bottom: 4px;
+  }
+  .sym-item-latin {
+    font-size: 11px; color: var(--text-muted);
+    font-style: italic; margin-bottom: 6px;
+  }
+  .sym-item-symptoms {
+    font-size: 12px; color: var(--text);
+    line-height: 1.5;
+  }
+  .sym-item-symptoms::before {
+    content: '症狀 · ';
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  /* === 資訊卡內症狀標籤 === */
+  .info-symptom-chips {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    margin-top: 10px;
+  }
+  .info-symptom-chip {
+    background: var(--accent-soft);
+    color: var(--accent);
+    padding: 6px 10px;
+    border-radius: 14px;
+    font-size: 12px;
+    cursor: pointer;
+    border: 1px solid transparent;
+  }
+  .info-symptom-chip:hover { border-color: var(--accent); }
+  .info-symptom-chip::before { content: '⚑ '; }
+
+  /* === Marker 表單的症狀下拉 === */
+  .form-select {
+    width: 100%; padding: 10px 12px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text);
+    font-family: inherit; font-size: 14px;
+    -webkit-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath fill='%238a8780' d='M6 8L0 0h12z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+  }
+  .form-select:focus { outline: none; border-color: var(--accent); }
+
+  /* === PDF 模板(渲染時暫時可見才能被 html2canvas 抓到) === */
+  #pdf-template {
+    position: fixed;
+    left: 0; top: 0;
+    width: 210mm;
+    background: white;
+    color: #222;
+    font-family: "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+    opacity: 0;
+    pointer-events: none;
+    z-index: -1;
+  }
+  #pdf-template .pdf-page {
+    padding: 18mm 16mm;
+    min-height: 297mm;
+    box-sizing: border-box;
+  }
+  #pdf-template .pdf-header {
+    border-bottom: 2px solid #c94c4c;
+    padding-bottom: 6mm; margin-bottom: 8mm;
+  }
+  #pdf-template .pdf-title {
+    font-size: 18pt; font-weight: 600;
+    color: #1a1a1a; margin: 0;
+  }
+  #pdf-template .pdf-meta {
+    font-size: 10pt; color: #666;
+    margin-top: 3mm;
+  }
+  #pdf-template .pdf-section { margin-top: 8mm; }
+  #pdf-template .pdf-section h2 {
+    font-size: 13pt; color: #c94c4c;
+    border-left: 3px solid #c94c4c;
+    padding-left: 3mm;
+    margin: 0 0 4mm;
+  }
+  #pdf-template .pdf-section p {
+    font-size: 11pt; line-height: 1.85;
+    color: #2a2a2a; margin: 0 0 3mm;
+  }
+  #pdf-template .pdf-row {
+    display: flex; margin-bottom: 2.5mm; font-size: 11pt;
+  }
+  #pdf-template .pdf-row-label {
+    width: 28mm; color: #888; flex-shrink: 0;
+  }
+  #pdf-template .pdf-row-value { color: #1a1a1a; flex: 1; }
+  #pdf-template .pdf-callout {
+    background: #fef5f5; border-left: 3px solid #c94c4c;
+    padding: 4mm 5mm; margin: 3mm 0;
+    border-radius: 2mm;
+  }
+  #pdf-template .pdf-callout.solve {
+    background: #f4faf3; border-left-color: #7cb87a;
+  }
+  #pdf-template .pdf-callout-label {
+    font-size: 9pt; color: #888;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    margin-bottom: 2mm;
+  }
+  #pdf-template .pdf-callout-text {
+    font-size: 11pt; line-height: 1.7; color: #1a1a1a;
+  }
+  #pdf-template .pdf-footer {
+    margin-top: 14mm; padding-top: 4mm;
+    border-top: 1px solid #ddd;
+    font-size: 8pt; color: #999;
+    line-height: 1.6;
+  }
+
+  /* === 通用 modal(學員、症狀編輯) === */
+  .generic-modal {
+    position: fixed; inset: 0; z-index: 22;
+    background: rgba(0,0,0,0.7);
+    display: none; align-items: center; justify-content: center;
+    padding: 20px; backdrop-filter: blur(4px);
+  }
+  .generic-modal.open { display: flex; }
+
+  /* === 照片暫存區(marker form) === */
+  .photo-staging {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+    margin-bottom: 8px;
+  }
+  .photo-staging:empty { display: none; }
+  .photo-thumb {
+    position: relative; aspect-ratio: 1; border-radius: 6px; overflow: hidden;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+  }
+  .photo-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .photo-thumb-label {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.85), transparent);
+    color: white; font-size: 10px; padding: 14px 6px 4px;
+  }
+  .photo-thumb-label input {
+    width: 100%; background: transparent; border: none;
+    color: white; font-size: 10px; padding: 0;
+    text-align: center;
+  }
+  .photo-thumb-label input:focus { outline: none; background: rgba(0,0,0,0.4); }
+  .photo-thumb-del {
+    position: absolute; top: 4px; right: 4px;
+    background: rgba(0,0,0,0.75); color: white;
+    border: none; border-radius: 50%;
+    width: 20px; height: 20px; font-size: 12px;
+    cursor: pointer; line-height: 1; padding: 0;
+  }
+  .photo-add-btn {
+    display: flex; align-items: center; justify-content: center;
+    width: 100%; padding: 14px; cursor: pointer;
+    background: transparent;
+    border: 1px dashed var(--border-strong); border-radius: 6px;
+    color: var(--text-muted); font-size: 13px;
+    font-family: inherit;
+    transition: all 0.15s ease;
+  }
+  .photo-add-btn:hover { color: var(--text); border-color: var(--accent); }
+
+  /* === 目前學員小標籤(畫面右上、chip 旁) === */
+  #active-student-chip {
+    position: absolute;
+    top: 14px; right: 70px; z-index: 8;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-strong);
+    border-radius: 18px;
+    padding: 7px 14px;
+    font-size: 12px;
+    color: var(--text);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: none;
+    cursor: pointer;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  #active-student-chip.show { display: block; }
+  #active-student-chip::before { content: '👤 '; opacity: 0.6; }
+
+  /* === 學員側欄(沿用 Lexicon 樣式) === */
+  #students-panel {
+    position: absolute;
+    top: 0; right: 0; bottom: 0; width: 380px;
+    z-index: 16;
+    background: var(--bg-panel-solid);
+    border-left: 1px solid var(--border);
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.2, 0.9, 0.3, 1);
+    display: flex; flex-direction: column;
+  }
+  #students-panel.open { transform: translateX(0); }
+  @media (max-width: 480px) { #students-panel { width: 100%; } }
+  #stu-content { flex: 1; overflow-y: auto; padding-bottom: 20px; }
+  .stu-list-add {
+    padding: 12px 18px; border-bottom: 1px solid var(--border);
+  }
+  .stu-list-add button {
+    width: 100%; padding: 10px; border-radius: 6px;
+    background: var(--accent); color: white; border: none;
+    font-family: inherit; font-size: 13px; cursor: pointer;
+    font-weight: 500;
+  }
+  .stu-detail-header {
+    padding: 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .stu-detail-name { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
+  .stu-detail-notes {
+    font-size: 12px; color: var(--text-muted);
+    line-height: 1.6; margin-top: 8px;
+    padding: 10px; border-radius: 6px;
+    background: rgba(255,255,255,0.03);
+  }
+  .stu-detail-actions {
+    display: flex; gap: 8px; margin-top: 12px;
+  }
+  .stu-detail-actions button {
+    flex: 1; padding: 8px; border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent; color: var(--text);
+    font-family: inherit; font-size: 12px; cursor: pointer;
+  }
+  .stu-detail-actions button:hover { border-color: var(--border-strong); }
+  .stu-detail-actions button.primary {
+    background: var(--accent); border-color: var(--accent); color: white;
+  }
+  .stu-detail-actions button.danger:hover {
+    border-color: var(--accent); color: var(--accent);
+  }
+  .stu-records-header {
+    padding: 10px 18px; display: flex; justify-content: space-between;
+    align-items: center; border-bottom: 1px solid var(--border);
+  }
+  .stu-records-title {
+    font-size: 11px; letter-spacing: 0.15em;
+    color: var(--text-muted); text-transform: uppercase;
+  }
+  .stu-export-bar {
+    padding: 10px 18px; display: flex; gap: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  .stu-export-bar button {
+    flex: 1; padding: 8px 4px; border-radius: 6px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    color: var(--text); font-family: inherit; font-size: 12px;
+    cursor: pointer;
+  }
+  .stu-export-bar button:hover { border-color: var(--accent); color: var(--accent); }
+  .empty-state {
+    text-align: center; padding: 40px 20px;
+    color: var(--text-dim); font-size: 13px; line-height: 1.7;
+  }
+  .stu-item, .sym-edit-item {
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+    cursor: pointer;
+  }
+  .stu-item:hover, .sym-edit-item:hover { background: rgba(255,255,255,0.03); }
+  .stu-item.active {
+    background: var(--accent-soft);
+    border-left: 3px solid var(--accent);
+  }
+  .stu-item-info { flex: 1; }
+  .stu-item-name { font-size: 14px; font-weight: 500; }
+  .stu-item-notes { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .icon-btn {
+    background: none; border: none;
+    color: var(--text-muted); cursor: pointer;
+    font-size: 13px; padding: 4px 8px;
+  }
+  .icon-btn:hover { color: var(--text); }
+
+  /* === 症狀面板上的工具列 === */
+  .sym-edit-toolbar {
+    padding: 8px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex; gap: 8px; align-items: center;
+  }
+  .sym-edit-toolbar .form-btn {
+    padding: 6px 12px; font-size: 12px; flex: 0 0 auto; width: auto;
+  }
+  .sym-edit-actions {
+    margin-left: auto; display: flex; gap: 2px;
+    flex-shrink: 0;
+  }
+  .sym-item { position: relative; }
+  .sym-edit-actions .icon-btn {
+    padding: 4px 6px; opacity: 0.5;
+  }
+  .sym-edit-actions .icon-btn:hover { opacity: 1; }
   .lex-head {
     padding: 14px 18px;
     border-bottom: 1px solid var(--border);
@@ -287,16 +614,36 @@
 
   /* === Modals === */
   #records-modal, #marker-form-modal {
-    position: absolute; inset: 0; z-index: 20;
+    position: fixed; inset: 0; z-index: 20;
     background: rgba(0,0,0,0.7);
     display: none; align-items: center; justify-content: center;
     padding: 20px; backdrop-filter: blur(4px);
   }
   #records-modal.open, #marker-form-modal.open { display: flex; }
+  /* modal 內可捲動的表單區 */
+  .modal-form-body {
+    padding: 18px 0 8px;
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.25) transparent;
+  }
+  .modal-form-body::-webkit-scrollbar { width: 6px; }
+  .modal-form-body::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.25);
+    border-radius: 3px;
+  }
+  .modal-form-body::-webkit-scrollbar-thumb:hover {
+    background: rgba(255,255,255,0.4);
+  }
   .modal-inner {
     background: var(--bg-panel-solid);
     border: 1px solid var(--border); border-radius: 12px;
-    width: 100%; max-width: 420px; max-height: 80vh;
+    width: 100%; max-width: 420px;
+    max-height: 88vh;
+    max-height: 88dvh;
     overflow: hidden; display: flex; flex-direction: column;
   }
   .modal-head {
@@ -435,8 +782,13 @@
   <div class="chip-latin" id="chip-latin"></div>
 </div>
 
+<!-- 目前學員(切換時顯示) -->
+<div id="active-student-chip" title="目前選中的學員"></div>
+
 <!-- 工具列 -->
 <div id="tool-bar">
+  <button class="tool-btn" id="btn-symptoms" title="症狀對照(手冊)">症</button>
+  <button class="tool-btn" id="btn-students" title="學員列表">學</button>
   <button class="tool-btn" id="btn-lexicon" title="解剖目錄">≡</button>
   <button class="tool-btn" id="btn-mark" title="新增疼痛標記">＋</button>
   <button class="tool-btn" id="btn-records" title="紀錄列表">◉</button>
@@ -468,6 +820,21 @@
   <div id="lex-tree"></div>
 </div>
 
+<!-- 症狀對照側欄 -->
+<div id="symptoms-panel">
+  <div class="lex-head">
+    <h2>症狀對照</h2>
+    <button class="modal-close" id="symptoms-close">✕</button>
+  </div>
+  <div class="sym-edit-toolbar">
+    <button class="form-btn primary" id="sym-add-btn">＋ 新增症狀</button>
+  </div>
+  <div class="lex-search-row">
+    <input id="sym-search" type="text" placeholder="搜尋症狀或肌肉名稱">
+  </div>
+  <div id="symptoms-tree"></div>
+</div>
+
 <!-- 紀錄列表 modal -->
 <div id="records-modal">
   <div class="modal-inner">
@@ -486,13 +853,25 @@
       <h2>新增疼痛標記</h2>
       <button class="modal-close" id="form-close">✕</button>
     </div>
-    <div style="padding: 18px 0 8px;">
+    <div class="modal-form-body">
+      <div class="form-field">
+        <label class="form-label">學員</label>
+        <div style="display:flex; gap:8px;">
+          <select class="form-select" id="form-student-select" style="flex:1;"></select>
+          <button type="button" class="form-btn" id="form-new-student" style="flex:0 0 auto; padding:8px 12px; width:auto;">＋</button>
+        </div>
+        <input class="form-input" id="form-student" placeholder="或直接打名字" style="margin-top:8px;">
+      </div>
       <div class="form-field">
         <label class="form-label">部位名稱</label>
         <input class="form-input" id="form-name" placeholder="例:右肩胛內側">
       </div>
       <div class="form-field">
         <label class="form-label" id="form-attached-label" style="color:var(--text-muted)"></label>
+      </div>
+      <div class="form-field">
+        <label class="form-label">相關症狀(選填,影響 PDF 衛教內容)</label>
+        <select class="form-select" id="form-symptom"></select>
       </div>
       <div class="form-field">
         <label class="form-label">疼痛分數 (VAS 0–10)</label>
@@ -502,8 +881,14 @@
         <span id="vas-value">5</span>
       </div>
       <div class="form-field">
-        <label class="form-label">文字紀錄</label>
-        <textarea class="form-textarea" id="form-note" placeholder="出現情境、誘發動作、改善前後感受…"></textarea>
+        <label class="form-label">照片(放鬆前後對照)</label>
+        <div id="photo-staging" class="photo-staging"></div>
+        <input type="file" id="photo-input" accept="image/*" multiple style="display:none;">
+        <button type="button" class="photo-add-btn" id="photo-add-btn">＋ 加入照片</button>
+      </div>
+      <div class="form-field">
+        <label class="form-label">教練備註</label>
+        <textarea class="form-textarea" id="form-note" placeholder="出現情境、誘發動作、改善前後感受、給學員的功課…"></textarea>
       </div>
     </div>
     <div class="form-actions">
@@ -512,6 +897,95 @@
     </div>
   </div>
 </div>
+
+<!-- 學員側欄(list + detail 兩個 view) -->
+<div id="students-panel">
+  <div class="lex-head">
+    <button class="modal-close" id="stu-back" style="display:none; font-size:18px; padding:0 8px 0 0;">←</button>
+    <h2 id="stu-panel-title">學員列表</h2>
+    <button class="modal-close" id="stu-close">✕</button>
+  </div>
+  <div id="stu-content"></div>
+</div>
+
+<!-- 學員新增/編輯表單 -->
+<div id="student-form-modal" class="generic-modal">
+  <div class="modal-inner">
+    <div class="modal-head">
+      <h2 id="student-form-title">新增學員</h2>
+      <button class="modal-close" id="student-form-close">✕</button>
+    </div>
+    <div class="modal-form-body">
+      <div class="form-field">
+        <label class="form-label">名字 *</label>
+        <input class="form-input" id="student-name" placeholder="例:王小明">
+      </div>
+      <div class="form-field">
+        <label class="form-label">備註(舊傷、目標、過敏…)</label>
+        <textarea class="form-textarea" id="student-notes"></textarea>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="form-btn" id="student-form-cancel">取消</button>
+      <button class="form-btn primary" id="student-form-save">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 症狀新增/編輯表單 -->
+<div id="symptom-form-modal" class="generic-modal">
+  <div class="modal-inner" style="max-width:520px;">
+    <div class="modal-head">
+      <h2 id="symptom-form-title">新增症狀</h2>
+      <button class="modal-close" id="symptom-form-close">✕</button>
+    </div>
+    <div class="modal-form-body">
+      <div class="form-field">
+        <label class="form-label">章節分類</label>
+        <select class="form-select" id="sym-section"></select>
+      </div>
+      <div class="form-field">
+        <label class="form-label">肌肉中文名 *</label>
+        <input class="form-input" id="sym-name" placeholder="例:中斜角肌">
+      </div>
+      <div class="form-field">
+        <label class="form-label">肌肉英文/拉丁名</label>
+        <input class="form-input" id="sym-latin" placeholder="例:Scalenus Medius">
+      </div>
+      <div class="form-field">
+        <label class="form-label">常見臨床症狀 *</label>
+        <input class="form-input" id="sym-symptoms" placeholder="例:膏肓深層悶痛、肩胛內側痠痛">
+      </div>
+      <div class="form-field">
+        <label class="form-label">連鎖反應與解剖學代償</label>
+        <textarea class="form-textarea" id="sym-mechanism" rows="3"></textarea>
+      </div>
+      <div class="form-field">
+        <label class="form-label">💡 為什麼會這樣(白話衛教)</label>
+        <textarea class="form-textarea" id="sym-why" rows="3"></textarea>
+      </div>
+      <div class="form-field">
+        <label class="form-label">🛠️ 怎麼解決</label>
+        <textarea class="form-textarea" id="sym-solution" rows="3"></textarea>
+      </div>
+      <div class="form-field">
+        <label class="form-label">對應的 3D 肌肉關鍵字(英文/拉丁,逗號分隔)</label>
+        <input class="form-input" id="sym-keys" placeholder="例:scalenus medius, levator scapulae">
+        <div style="font-size:11px; color:var(--text-dim); margin-top:6px; line-height:1.6;">
+          這些關鍵字會比對 .glb 模型內的肌肉名稱(部分匹配、不分大小寫)。<br>
+          可從 3D 圖點擊肌肉後,複製 chip 內的拉丁名。
+        </div>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="form-btn" id="symptom-form-cancel">取消</button>
+      <button class="form-btn primary" id="symptom-form-save">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- PDF 匯出函式庫 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
 <script type="importmap">
 {
@@ -719,6 +1193,156 @@ function printSceneHierarchy(node, depth = 0, maxDepth = 3) {
 }
 
 // ============================================
+// 症狀對照資料庫(來自手冊 v4)
+// 18 筆完整內容,可持續擴充
+// ============================================
+const DEFAULT_SYMPTOMS = [
+  // 一、頸部、呼吸與上肢功能鏈
+  { id: 's01', section: '頸部、呼吸與上肢功能鏈', muscleName: '前/中斜角肌', muscleLatin: 'Anterior/Medius Scalenes',
+    symptoms: '手臂痠麻、肩頸側邊大範圍緊痛',
+    mechanism: '肌肉間隙過緊,壓迫臂神經叢與鎖骨下動脈;引發聳肩代鎖胸式呼吸。',
+    why: '脖子側邊肌肉太緊,壓迫到通往手臂的神經血管叢,導致整片肩膀拉扯不適。',
+    solution: '深度放鬆斜角肌,並重新練習腹式呼吸,減少脖子代償。',
+    keys: ['scalenus anterior', 'scalenus medius'] },
+  { id: 's02', section: '頸部、呼吸與上肢功能鏈', muscleName: '中斜角肌與背肩胛神經', muscleLatin: 'Scalenus Medius / Dorsal Scapular Nerve',
+    symptoms: '膏肓深層悶痛、脖子連到肩胛內側痠痛',
+    mechanism: '背肩胛神經穿過中斜角肌纖維,當肌肉緊繃時會直接勒住神經,導致其支配的肩胛提肌與菱形肌慢性發炎、怎麼按背都好不了。',
+    why: '不是你背拉傷,而是脖子側邊肌肉太緊,像夾子一樣掐住了通往背部的神經電線,導致背部膏肓處產生嚴重的深層悶痛。',
+    solution: '狂按背是沒用的,案發現場在脖子!必須精準釋放中斜角肌,把神經夾擠鬆開,背自然就好了。',
+    keys: ['scalenus medius', 'levator scapulae', 'rhomboideus'] },
+  { id: 's03', section: '頸部、呼吸與上肢功能鏈', muscleName: '後斜角肌', muscleLatin: 'Posterior Scalene',
+    symptoms: '手指末梢發麻、胸廓出口症候群',
+    mechanism: '連接頸椎與第二肋骨,過緊會上提肋骨,連帶擠壓前中斜角肌間隙。',
+    why: '脖子後側深處太緊,像夾子一樣夾住神經根,一路影響到指尖。',
+    solution: '針對後斜角肌點對點釋壓,並調整頸椎排列與頭前引體態。',
+    keys: ['scalenus posterior'] },
+  { id: 's04', section: '頸部、呼吸與上肢功能鏈', muscleName: '肩胛舌骨肌', muscleLatin: 'Omohyoid',
+    symptoms: '鎖骨上方與脖子前側精準痛點、吞嚥異物感',
+    mechanism: '深層肌肉。當長期有烏龜頸(頭前引)體態,且表層上斜方肌、肩胛提肌緊到極限失能後,強迫此細小肌肉拉長代償。',
+    why: '嚴重的烏龜頸(頭前引)體態讓這條細小的深層肌肉被過度拉扯抗議。',
+    solution: '這條肌肉很細很深,千萬不能大力揉捏。需要透過體態導正(縮下巴訓練)讓頭頸回正,減少拉扯力。',
+    keys: ['omohyoideus', 'omohyoid'] },
+  { id: 's05', section: '頸部、呼吸與上肢功能鏈', muscleName: '鎖骨下肌', muscleLatin: 'Subclavius',
+    symptoms: '圓肩體態、雙手舉過頭卡頓',
+    mechanism: '拉動鎖骨下壓並前傾,限制鎖骨向上旋轉的正常活動度。',
+    why: '鎖骨下方的肌肉縮短僵硬,把整個肩膀往前拉扣進來。',
+    solution: '手法放鬆鎖骨下肌,增加鎖骨向上旋轉與後旋的活動空間。',
+    keys: ['subclavius'] },
+  { id: 's06', section: '頸部、呼吸與上肢功能鏈', muscleName: '胸小肌', muscleLatin: 'Pectoralis Minor',
+    symptoms: '圓肩、翼狀肩胛',
+    mechanism: '將肩胛骨向前引並下旋,導致背部前鋸肌、菱形肌長期拉長失能。',
+    why: '胸口小肌肉太緊,把肩膀往前拉,導致後背肌肉長期被拉長而無力。',
+    solution: '拉伸與放鬆胸小肌,並立刻啟動後背的中下斜方肌與前鋸肌。',
+    keys: ['pectoralis minor'] },
+  { id: 's07', section: '頸部、呼吸與上肢功能鏈', muscleName: '旋轉肌群', muscleLatin: 'Rotator Cuff',
+    symptoms: '五十肩、肩峰下撞擊痛',
+    mechanism: '棘上肌、棘下肌等張力不均,導致肱骨頭無法在關節囊內良好滑動。',
+    why: '肩關節內部空間變小、不平衡,導致骨頭跟骨頭不斷摩擦產生夾擠痛。',
+    solution: '平衡旋轉肌群張力,放鬆後骨頭空間變大,再透過訓練穩定關節。',
+    keys: ['supraspinatus', 'infraspinatus', 'teres minor', 'subscapularis'] },
+  { id: 's08', section: '頸部、呼吸與上肢功能鏈', muscleName: '前臂伸/屈肌群', muscleLatin: 'Forearm Extensors/Flexors',
+    symptoms: '網球肘 / 高爾夫球肘',
+    mechanism: '前臂累積張力過高,骨膜附著點慢性發炎;常因肩胛不穩導致末梢補償。',
+    why: '手腕過度使用或抓握太多,壓力全部累積到手肘的骨膜附著點。',
+    solution: '放鬆前臂肌群,並往前檢查肩胛與背部的穩定度,減少末梢代償。',
+    keys: ['flexor', 'extensor'] },
+  // 二、軀幹核心、體態與骨盆力學
+  { id: 's09', section: '軀幹核心、體態與骨盆力學', muscleName: '闊筋膜張肌', muscleLatin: 'Tensor Fasciae Latae (TFL)',
+    symptoms: '假胯髖、臀部凹陷、練臀沒感覺',
+    mechanism: '過度縮短導致髖關節內旋,壓制臀中肌發力;強烈拉扯髂脛束。',
+    why: '大腿外側肌肉太強勢,把屁股的工作搶光光,導致大腿外側變粗、骨盆變寬。',
+    solution: '滾筒放鬆 TFL,並積極做臀中肌與臀大肌的阻力啟動訓練。',
+    keys: ['tensor fasciae latae'] },
+  { id: 's10', section: '軀幹核心、體態與骨盆力學', muscleName: '腰大肌', muscleLatin: 'Psoas',
+    symptoms: '骨盆前傾、下背挺直疼痛',
+    mechanism: '直接將腰椎向前拉,造成下背豎脊肌過度擠壓;限制髖關節後伸能力。',
+    why: '深層肌肉像一條橡皮筋把腰椎往前拉,讓你站久或重訓時腰部壓力超大。',
+    solution: '進行深度髂腰肌拉伸,並重新找回腹部核心與臀部的支撐力。',
+    keys: ['psoas'] },
+  { id: 's11', section: '軀幹核心、體態與骨盆力學', muscleName: '髂腰肌', muscleLatin: 'Iliopsoas',
+    symptoms: '髖夾擠(FAI)、腹股溝卡頓',
+    mechanism: '髖關節前方空間縮小,股骨頭前移,在屈髖動作時與關節唇產生撞擊。',
+    why: '大腿根部前方空間不足,活動時股骨頭產生擠壓、碰撞甚至發出卡嗒聲。',
+    solution: '釋放腹股溝周圍張力,調整深蹲或髖屈的正確動作軌跡。',
+    keys: ['iliopsoas', 'iliacus', 'psoas'] },
+  { id: 's12', section: '軀幹核心、體態與骨盆力學', muscleName: '梨狀肌', muscleLatin: 'Piriformis',
+    symptoms: '假性坐骨神經痛、走路外八字',
+    mechanism: '肌肉僵硬肥大,直接壓迫下方通過的坐骨神經;導致髖關節內旋受限。',
+    why: '屁股深處的肌肉太緊、腫脹,直接壓迫到下方經過的坐骨神經。',
+    solution: '使用網球或按摩手法精準放鬆梨狀肌,並改善骨盆兩側的張力失衡。',
+    keys: ['piriformis'] },
+  // 三、股四頭肌深度細分與膝關節鏈
+  { id: 's13', section: '股四頭肌深度細分與膝關節鏈', muscleName: '股直肌', muscleLatin: 'Rectus Femoris',
+    symptoms: '骨盆前傾、深蹲腰痠、膝前痛',
+    mechanism: '雙關節肌,同時限制骨盆與膝關節活動度,後分腿蹲髖部嚴重打不開。',
+    why: '它是唯一跨越髖和膝的肌肉,太緊時會一邊扯骨盆一邊扯膝蓋,腰和膝蓋都吃力。',
+    solution: '做髖伸＋膝屈的深度拉伸,釋放前側大肌肉張力。',
+    keys: ['rectus femoris'] },
+  { id: 's14', section: '股四頭肌深度細分與膝關節鏈', muscleName: '股外側肌', muscleLatin: 'Vastus Lateralis',
+    symptoms: '髕骨外移、深蹲膝蓋內扣',
+    mechanism: '外側張力過大,與內側力量失衡,將髕骨向外拉扯,造成軌跡摩擦磨損。',
+    why: '大腿外側張力太強,把膝蓋蓋子(髕骨)硬往外扯,深蹲時膝蓋就容易內扣。',
+    solution: '深度放鬆大腿外側肌肉與外側側韌帶周圍,並引導身體在深蹲時外旋對齊腳尖。',
+    keys: ['vastus lateralis'] },
+  { id: 's15', section: '股四頭肌深度細分與膝關節鏈', muscleName: '股內側肌', muscleLatin: 'Vastus Medialis (VMO)',
+    symptoms: '膝關節不穩、下樓梯腿軟',
+    mechanism: '主要負責膝伸直最後 15 度的鎖定與髕骨內側穩定,該肌群通常失能無力。',
+    why: '這塊肌肉通常「太弱了」,沒辦法幫忙抓緊膝蓋,下樓梯時就容易軟腳。',
+    solution: '進行針對性彈力帶或最後 15 度膝伸直的角度強化訓練,找回內側穩定度。',
+    keys: ['vastus medialis'] },
+  { id: 's16', section: '股四頭肌深度細分與膝關節鏈', muscleName: '股中間肌', muscleLatin: 'Vastus Intermedius',
+    symptoms: '跳躍膝(髕骨腱炎)',
+    mechanism: '與股四頭肌總腱張力直接相連,高衝擊落地時無法有效吸收震波。',
+    why: '深層前側肌肉硬得像石頭,在跳躍落地時無法吸收震波,讓膝蓋下韌帶慢性發炎。',
+    solution: '使用滾筒大面積深度釋放壓力,並教導學生多用屁股與核心落地緩衝。',
+    keys: ['vastus intermedius'] },
+  // 四、下肢足踝與動力鏈末端
+  { id: 's17', section: '下肢足踝與動力鏈末端', muscleName: '腓腸肌/比目魚肌', muscleLatin: 'Calves (Gastrocnemius / Soleus)',
+    symptoms: '小腿抽筋、深蹲重心後倒',
+    mechanism: '踝關節背屈活動度不足,迫使深蹲時腰椎或膝關節過度前傾代償。',
+    why: '小腿長期過度收縮、循環變差,同時卡住了腳踝向上折(背屈)的活動度。',
+    solution: '放鬆小腿並做足背屈拉伸,可以立刻改善深蹲後倒與小腿抽筋問題。',
+    keys: ['gastrocnemius', 'soleus'] },
+  { id: 's18', section: '下肢足踝與動力鏈末端', muscleName: '髂脛束相關', muscleLatin: 'TFL / IT Band',
+    symptoms: '跑者膝、膝外側摩擦痛',
+    mechanism: '上游的 TFL 與臀大肌張力過高,導致 ITB 在肱骨外上髁反覆摩擦。',
+    why: '不是大腿外側那條大筋發炎,而是上游的 TFL 太緊,拉扯整條筋膜去摩擦膝蓋骨頭。',
+    solution: '不要直接狂壓髂脛束(會更發炎),要去放鬆上游的 TFL 與臀部肌肉。',
+    keys: ['tensor fasciae latae', 'gluteus maximus'] },
+];
+
+// 執行時用的可變陣列 — 啟動時從 IndexedDB 載入,使用者編輯後會更新
+let SYMPTOMS = [...DEFAULT_SYMPTOMS];
+
+// 由 mesh 名稱反查所有相關症狀
+function findSymptomsByMesh(meshName) {
+  if (!meshName) return [];
+  const n = meshName.toLowerCase();
+  return SYMPTOMS.filter(s => s.keys.some(k => n.includes(k.toLowerCase())));
+}
+
+// 由症狀反查在 3D 場景中對應的所有 mesh
+function findMeshesBySymptom(sym) {
+  return muscleMeshes.filter(m => {
+    const n = m.name.toLowerCase();
+    return sym.keys.some(k => n.includes(k.toLowerCase()));
+  });
+}
+
+// id 查詢
+function findSymptomById(id) {
+  return SYMPTOMS.find(s => s.id === id);
+}
+
+// 章節順序(顯示用)
+const SYMPTOM_SECTION_ORDER = [
+  '頸部、呼吸與上肢功能鏈',
+  '軀幹核心、體態與骨盆力學',
+  '股四頭肌深度細分與膝關節鏈',
+  '下肢足踝與動力鏈末端',
+];
+
+// ============================================
 // 場景設定
 // ============================================
 const container = document.getElementById('canvas-container');
@@ -845,7 +1469,7 @@ function loadFromFile(file) {
 // ============================================
 // 模型載入完成
 // ============================================
-function onModelLoaded(gltf) {
+async function onModelLoaded(gltf) {
   modelRoot = gltf.scene;
 
   // 居中 + 縮放到合適大小
@@ -924,8 +1548,12 @@ function onModelLoaded(gltf) {
   // 建構 Lexicon 樹
   buildLexiconTree();
 
-  // 載入紀錄(預設疼痛點)
-  renderCustomMarkers();
+  // 等 storage 初始化完成,然後渲染先前儲存的 markers
+  await storageReady;
+  await renderCustomMarkers();
+  buildSymptomsTree();
+  buildSymptomDropdown();
+  renderActiveStudentChip();
 
   // 關閉 loading
   loadingEl.style.display = 'none';
@@ -1210,6 +1838,13 @@ infoHandle.addEventListener('click', () => infoPanel.classList.toggle('expanded'
 
 function showMuscleInfo(info, mesh) {
   infoHandleLabel.textContent = '肌肉資訊';
+  const relatedSymptoms = findSymptomsByMesh(mesh.name);
+  const chipHtml = relatedSymptoms.length > 0
+    ? `<div class="info-section-label" style="margin-top:14px">手冊相關症狀</div>
+       <div class="info-symptom-chips">
+         ${relatedSymptoms.map(s => `<span class="info-symptom-chip" data-sym-id="${s.id}">${s.symptoms}</span>`).join('')}
+       </div>`
+    : '';
   infoBody.innerHTML = `
     <h1 class="info-title">${info.zh}</h1>
     <p class="info-latin">${info.latin}</p>
@@ -1218,79 +1853,267 @@ function showMuscleInfo(info, mesh) {
         <div class="info-section-label">臨床備註</div>
         <div class="info-section-text">${info.desc}</div>
       </div>` : ''}
+    ${chipHtml}
     <div class="info-action-row">
       <button class="info-action" id="info-mark-here">在此標記疼痛</button>
     </div>
   `;
   infoPanel.classList.add('expanded');
   document.getElementById('info-mark-here').addEventListener('click', () => {
-    // 自動進入標記模式並把這塊肌肉作為候選
     const box = new THREE.Box3().setFromObject(mesh);
     const center = box.getCenter(new THREE.Vector3());
     pendingMarker = {
       position: center,
       muscleName: mesh.name,
-      muscleInfo: info
+      muscleInfo: info,
+      // 若這個肌肉只對應一個症狀,預設選上
+      suggestedSymptomId: relatedSymptoms.length === 1 ? relatedSymptoms[0].id : null
     };
     openMarkerForm();
+  });
+  // chip 點擊 → 顯示該症狀完整內容
+  infoBody.querySelectorAll('.info-symptom-chip').forEach(el => {
+    el.addEventListener('click', () => {
+      const s = findSymptomById(el.dataset.symId);
+      if (s) showSymptomDetail(s);
+    });
   });
 }
 
 function showCustomInfo(rec) {
   infoHandleLabel.textContent = '個人紀錄';
+  const sym = rec.symptomId ? findSymptomById(rec.symptomId) : null;
+  // 照片以 object URL 顯示(離開時不釋放,因為要保留在 panel)
+  const photoHtml = (rec.photos && rec.photos.length > 0) ? `
+      <div class="info-section">
+        <div class="info-section-label">照片(${rec.photos.length})</div>
+        <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:6px; margin-top:6px;">
+          ${rec.photos.map(p => `
+            <div style="aspect-ratio:1; border-radius:6px; overflow:hidden; background:rgba(255,255,255,0.04); position:relative;">
+              <img src="${URL.createObjectURL(p.blob)}" style="width:100%; height:100%; object-fit:cover;">
+              <div style="position:absolute; bottom:0; left:0; right:0; background:linear-gradient(to top, rgba(0,0,0,0.85), transparent); color:white; font-size:10px; padding:8px 6px 4px;">${p.label}</div>
+            </div>`).join('')}
+        </div>
+      </div>` : '';
   infoBody.innerHTML = `
     <h1 class="info-title">${rec.name}</h1>
-    <p class="info-latin">VAS ${rec.vas} · ${new Date(rec.timestamp).toLocaleString('zh-TW')}</p>
+    <p class="info-latin">VAS ${rec.vas} · ${new Date(rec.timestamp).toLocaleString('zh-TW')}${rec.student ? ' · ' + rec.student : ''}</p>
     ${rec.attachedMuscle ? `
       <div class="info-section">
         <div class="info-section-label">附著肌肉</div>
         <div class="info-section-text">${rec.attachedMuscle}</div>
       </div>` : ''}
+    ${sym ? `
+      <div class="info-section cause">
+        <div class="info-section-label">為什麼會這樣</div>
+        <div class="info-section-text">${sym.why}</div>
+      </div>
+      <div class="info-section solve">
+        <div class="info-section-label">怎麼解決</div>
+        <div class="info-section-text">${sym.solution}</div>
+      </div>` : ''}
+    ${photoHtml}
     <div class="info-section">
-      <div class="info-section-label">紀錄</div>
+      <div class="info-section-label">教練備註</div>
       <div class="info-section-text">${rec.note || '(無備註)'}</div>
+    </div>
+    <div class="info-action-row">
+      <button class="info-action primary" id="info-share-pdf">匯出 PDF 給學員</button>
     </div>
   `;
   infoPanel.classList.add('expanded');
+  const sharBtn = document.getElementById('info-share-pdf');
+  if (sharBtn) sharBtn.addEventListener('click', () => exportRecordAsPDF(rec));
+}
+
+// 從症狀資料庫開啟詳細卡片
+function showSymptomDetail(sym) {
+  infoHandleLabel.textContent = '症狀對照';
+  infoBody.innerHTML = `
+    <h1 class="info-title">${sym.muscleName}</h1>
+    <p class="info-latin">${sym.muscleLatin}</p>
+    <div class="info-section cause">
+      <div class="info-section-label">常見臨床症狀</div>
+      <div class="info-section-text">${sym.symptoms}</div>
+    </div>
+    <div class="info-section">
+      <div class="info-section-label">連鎖反應與解剖學代償</div>
+      <div class="info-section-text">${sym.mechanism}</div>
+    </div>
+    <div class="info-section cause">
+      <div class="info-section-label">💡 為什麼會這樣(白話)</div>
+      <div class="info-section-text">${sym.why}</div>
+    </div>
+    <div class="info-section solve">
+      <div class="info-section-label">🛠️ 解決可以怎樣</div>
+      <div class="info-section-text">${sym.solution}</div>
+    </div>
+    <div class="info-action-row">
+      <button class="info-action" id="info-locate-muscle">在 3D 圖中顯示</button>
+    </div>
+  `;
+  infoPanel.classList.add('expanded');
+  document.getElementById('info-locate-muscle').addEventListener('click', () => {
+    const meshes = findMeshesBySymptom(sym);
+    if (meshes.length > 0) {
+      focusMesh(meshes[0]);
+      symptomsPanel.classList.remove('open');
+    } else {
+      alert('找不到對應的 mesh。可能是這個肌肉名稱在你的 .glb 中命名不同,看 console 確認。');
+      console.log('[Symptoms] 找不到 mesh,症狀 keys:', sym.keys);
+    }
+  });
 }
 
 // ============================================
-// 標記系統(localStorage)
+// IndexedDB 儲存層
+// 三個 store:records(紀錄+照片)、students(學員)、symptoms(症狀)
 // ============================================
-const STORAGE_KEY = 'muscle-app-records-v2';
+const DB_NAME = 'muscle-app';
+const DB_VERSION = 1;
+const STORE_RECORDS = 'records';
+const STORE_STUDENTS = 'students';
+const STORE_SYMPTOMS = 'symptoms';
+
 const painPointsGroup = new THREE.Group();
 scene.add(painPointsGroup);
 
-function loadRecords() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch (e) { return []; }
+let _db = null;
+function openDB() {
+  if (_db) return Promise.resolve(_db);
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE_RECORDS))  db.createObjectStore(STORE_RECORDS,  { keyPath: 'id' });
+      if (!db.objectStoreNames.contains(STORE_STUDENTS)) db.createObjectStore(STORE_STUDENTS, { keyPath: 'id' });
+      if (!db.objectStoreNames.contains(STORE_SYMPTOMS)) db.createObjectStore(STORE_SYMPTOMS, { keyPath: 'id' });
+    };
+    req.onsuccess = (e) => { _db = e.target.result; resolve(_db); };
+    req.onerror   = (e) => reject(e.target.error);
+  });
 }
-function saveRecords(records) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(records)); }
-  catch (e) { console.warn(e); }
+function dbOp(store, mode, op) {
+  return openDB().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(store, mode);
+    const req = op(tx.objectStore(store));
+    req.onsuccess = () => resolve(req.result);
+    req.onerror   = () => reject(req.error);
+  }));
 }
+const idb = {
+  put:    (s, v) => dbOp(s, 'readwrite', os => os.put(v)),
+  get:    (s, k) => dbOp(s, 'readonly',  os => os.get(k)),
+  getAll: (s)    => dbOp(s, 'readonly',  os => os.getAll()),
+  delete: (s, k) => dbOp(s, 'readwrite', os => os.delete(k)),
+};
 
-function addRecord(rec) {
-  const recs = loadRecords();
-  recs.unshift(rec);
-  saveRecords(recs);
-  renderCustomMarkers();
-}
-
-function deleteRecord(id) {
-  saveRecords(loadRecords().filter(r => r.id !== id));
-  renderCustomMarkers();
-  renderRecordsList();
-}
-
-function renderCustomMarkers() {
-  // 清掉舊的
-  while (painPointsGroup.children.length > 0) {
-    painPointsGroup.remove(painPointsGroup.children[0]);
+// === 初始化:遷移舊資料 + 種子內建症狀 ===
+async function initStorage() {
+  await openDB();
+  // 一次性從 localStorage 遷移
+  const oldKey = 'muscle-app-records-v2';
+  const raw = localStorage.getItem(oldKey);
+  if (raw) {
+    try {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr) && arr.length > 0) {
+        for (const r of arr) await idb.put(STORE_RECORDS, r);
+        console.log(`[Migration] 已遷移 ${arr.length} 筆紀錄到 IndexedDB`);
+      }
+      localStorage.removeItem(oldKey);
+    } catch (e) { console.warn('遷移失敗', e); }
   }
-  loadRecords().forEach(rec => createPainPointMesh(rec));
+  // 種子內建症狀(只有第一次跑會種,使用者刪了不會再種回來)
+  const existing = await idb.getAll(STORE_SYMPTOMS);
+  if (existing.length === 0 && !localStorage.getItem('muscle-app-symptoms-seeded')) {
+    for (const s of DEFAULT_SYMPTOMS) {
+      await idb.put(STORE_SYMPTOMS, { ...s, isBuiltin: true });
+    }
+    localStorage.setItem('muscle-app-symptoms-seeded', '1');
+    console.log(`[Seed] 已載入 ${DEFAULT_SYMPTOMS.length} 筆內建症狀`);
+  }
+  // 載入到記憶體
+  SYMPTOMS = (await idb.getAll(STORE_SYMPTOMS)).sort((a, b) => a.id.localeCompare(b.id));
+  STUDENTS = await idb.getAll(STORE_STUDENTS);
+}
+
+// === 紀錄 ===
+async function loadRecords() {
+  const arr = await idb.getAll(STORE_RECORDS);
+  return arr.sort((a, b) => b.timestamp - a.timestamp);
+}
+async function addRecord(rec) {
+  await idb.put(STORE_RECORDS, rec);
+  await renderCustomMarkers();
+}
+async function updateRecord(rec) {
+  await idb.put(STORE_RECORDS, rec);
+}
+async function deleteRecord(id) {
+  await idb.delete(STORE_RECORDS, id);
+  await renderCustomMarkers();
+}
+async function renderCustomMarkers() {
+  while (painPointsGroup.children.length > 0) painPointsGroup.remove(painPointsGroup.children[0]);
+  const records = await loadRecords();
+  records.forEach(createPainPointMesh);
+}
+
+// === 學員 ===
+let STUDENTS = [];
+const ACTIVE_STUDENT_KEY = 'muscle-app-active-student';
+function getActiveStudentId() { return localStorage.getItem(ACTIVE_STUDENT_KEY) || ''; }
+function setActiveStudentId(id) {
+  if (id) localStorage.setItem(ACTIVE_STUDENT_KEY, id);
+  else localStorage.removeItem(ACTIVE_STUDENT_KEY);
+}
+function getActiveStudent() { return STUDENTS.find(s => s.id === getActiveStudentId()); }
+async function addStudent(stu) { await idb.put(STORE_STUDENTS, stu); STUDENTS = await idb.getAll(STORE_STUDENTS); }
+async function deleteStudent(id) { await idb.delete(STORE_STUDENTS, id); STUDENTS = await idb.getAll(STORE_STUDENTS); if (getActiveStudentId() === id) setActiveStudentId(''); }
+
+// === 症狀 ===
+async function saveSymptom(s) {
+  await idb.put(STORE_SYMPTOMS, s);
+  SYMPTOMS = (await idb.getAll(STORE_SYMPTOMS)).sort((a, b) => a.id.localeCompare(b.id));
+  buildSymptomsTree();
+  buildSymptomDropdown();
+}
+async function deleteSymptom(id) {
+  await idb.delete(STORE_SYMPTOMS, id);
+  SYMPTOMS = (await idb.getAll(STORE_SYMPTOMS)).sort((a, b) => a.id.localeCompare(b.id));
+  buildSymptomsTree();
+  buildSymptomDropdown();
+}
+
+// === 照片處理 ===
+// 把使用者選的圖片縮小成最長邊 maxDim,輸出 Blob(JPEG)以節省 IndexedDB 空間
+async function resizeImage(file, maxDim = 1600, quality = 0.85) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((res, rej) => {
+      const i = new Image();
+      i.onload = () => res(i);
+      i.onerror = rej;
+      i.src = url;
+    });
+    const ratio = Math.min(maxDim / img.width, maxDim / img.height, 1);
+    const w = Math.round(img.width * ratio);
+    const h = Math.round(img.height * ratio);
+    const canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+    return await new Promise(r => canvas.toBlob(r, 'image/jpeg', quality));
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+function blobToDataURL(blob) {
+  return new Promise(res => {
+    const r = new FileReader();
+    r.onload = () => res(r.result);
+    r.readAsDataURL(blob);
+  });
 }
 
 function createPainPointMesh(rec) {
@@ -1326,7 +2149,18 @@ const vasSlider = document.getElementById('vas-slider');
 const vasValue = document.getElementById('vas-value');
 const formName = document.getElementById('form-name');
 const formNote = document.getElementById('form-note');
+const formStudent = document.getElementById('form-student');
+const formStudentSelect = document.getElementById('form-student-select');
+const formSymptom = document.getElementById('form-symptom');
 const formAttachedLabel = document.getElementById('form-attached-label');
+const photoStaging = document.getElementById('photo-staging');
+const photoInput = document.getElementById('photo-input');
+
+// 照片暫存(form 開啟期間)
+let pendingPhotos = [];  // [{file, label, previewUrl}, ...]
+
+// 學員名稱記住上次填的
+const LAST_STUDENT_KEY = 'muscle-app-last-student';
 
 markBtn.addEventListener('click', () => {
   markMode = !markMode;
@@ -1336,37 +2170,150 @@ markBtn.addEventListener('click', () => {
 
 vasSlider.addEventListener('input', () => vasValue.textContent = vasSlider.value);
 
+// 建立症狀下拉選單(從目前的 SYMPTOMS)
+function buildSymptomDropdown() {
+  if (!formSymptom) return;
+  const opts = ['<option value="">— 不指定 —</option>'];
+  const sections = [...new Set(SYMPTOMS.map(s => s.section))]
+    .sort((a, b) => SYMPTOM_SECTION_ORDER.indexOf(a) - SYMPTOM_SECTION_ORDER.indexOf(b));
+  sections.forEach(section => {
+    const inSection = SYMPTOMS.filter(s => s.section === section);
+    if (inSection.length === 0) return;
+    opts.push(`<optgroup label="${section}">`);
+    inSection.forEach(s => {
+      opts.push(`<option value="${s.id}">${s.muscleName} — ${s.symptoms}</option>`);
+    });
+    opts.push('</optgroup>');
+  });
+  formSymptom.innerHTML = opts.join('');
+}
+
+// 建立 marker form 的學員下拉
+function buildStudentSelect() {
+  const active = getActiveStudentId();
+  const opts = ['<option value="">— 用下方欄位輸入 —</option>',
+    ...STUDENTS.map(s => `<option value="${s.id}" ${s.id===active?'selected':''}>${s.name}</option>`)];
+  formStudentSelect.innerHTML = opts.join('');
+}
+
+formStudentSelect.addEventListener('change', () => {
+  const id = formStudentSelect.value;
+  if (id) {
+    const stu = STUDENTS.find(s => s.id === id);
+    if (stu) { formStudent.value = stu.name; setActiveStudentId(stu.id); renderActiveStudentChip(); }
+  }
+});
+
+document.getElementById('form-new-student').addEventListener('click', () => {
+  openStudentForm(null, 'marker');
+});
+
+// 加入照片按鈕 → 觸發隱藏的 file input
+document.getElementById('photo-add-btn').addEventListener('click', () => {
+  photoInput.click();
+});
+
+// 照片上傳
+photoInput.addEventListener('change', async (e) => {
+  const files = Array.from(e.target.files || []);
+  if (files.length === 0) return;
+  for (const file of files) {
+    if (!file.type.startsWith('image/')) continue;
+    const previewUrl = URL.createObjectURL(file);
+    const defaultLabel = pendingPhotos.length === 0 ? '前-正面'
+      : pendingPhotos.length === 1 ? '後-正面'
+      : `照片 ${pendingPhotos.length + 1}`;
+    pendingPhotos.push({ file, label: defaultLabel, previewUrl });
+  }
+  renderPhotoStaging();
+  photoInput.value = '';
+});
+
+function renderPhotoStaging() {
+  photoStaging.innerHTML = pendingPhotos.map((p, i) => `
+    <div class="photo-thumb">
+      <img src="${p.previewUrl}" alt="">
+      <button type="button" class="photo-thumb-del" data-idx="${i}">✕</button>
+      <div class="photo-thumb-label">
+        <input type="text" value="${p.label}" data-idx="${i}" placeholder="標籤">
+      </div>
+    </div>
+  `).join('');
+  photoStaging.querySelectorAll('.photo-thumb-del').forEach(b => {
+    b.addEventListener('click', () => {
+      const i = parseInt(b.dataset.idx);
+      URL.revokeObjectURL(pendingPhotos[i].previewUrl);
+      pendingPhotos.splice(i, 1);
+      renderPhotoStaging();
+    });
+  });
+  photoStaging.querySelectorAll('.photo-thumb-label input').forEach(inp => {
+    inp.addEventListener('input', () => {
+      pendingPhotos[parseInt(inp.dataset.idx)].label = inp.value;
+    });
+  });
+}
+
 function openMarkerForm() {
+  buildStudentSelect();
+  const active = getActiveStudent();
+  formStudent.value = active?.name || localStorage.getItem(LAST_STUDENT_KEY) || '';
   formName.value = pendingMarker?.muscleInfo?.zh || '';
   formNote.value = '';
   vasSlider.value = 5;
   vasValue.textContent = '5';
+  formSymptom.value = pendingMarker?.suggestedSymptomId || '';
   formAttachedLabel.textContent = pendingMarker?.muscleInfo
     ? `附著肌肉:${pendingMarker.muscleInfo.zh} (${pendingMarker.muscleInfo.latin})` : '';
+  pendingPhotos = [];
+  renderPhotoStaging();
   formModal.classList.add('open');
 }
 function closeMarkerForm() {
   formModal.classList.remove('open');
   pendingMarker = null;
+  // 清掉照片預覽 URL 釋放記憶體
+  pendingPhotos.forEach(p => URL.revokeObjectURL(p.previewUrl));
+  pendingPhotos = [];
 }
 
 document.getElementById('form-close').addEventListener('click', closeMarkerForm);
 document.getElementById('form-cancel').addEventListener('click', closeMarkerForm);
-document.getElementById('form-save').addEventListener('click', () => {
+document.getElementById('form-save').addEventListener('click', async () => {
   if (!pendingMarker) return;
+  const studentName = formStudent.value.trim();
+  if (studentName) localStorage.setItem(LAST_STUDENT_KEY, studentName);
+
+  // 處理照片:把目前 staging 區的 File 物件全部縮圖成 Blob,塞進 rec.photos
+  const photos = [];
+  for (const item of pendingPhotos) {
+    const blob = await resizeImage(item.file);
+    photos.push({
+      id: 'photo-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+      label: item.label,
+      blob: blob,
+      ts: Date.now()
+    });
+  }
+
   const rec = {
     id: 'rec-' + Date.now(),
-    name: formName.value.trim() || pendingMarker.muscleInfo.zh || '未命名標記',
+    studentId: getActiveStudentId() || null,
+    student: studentName || (getActiveStudent()?.name || ''),
+    name: formName.value.trim() || pendingMarker.muscleInfo?.zh || '未命名標記',
     vas: parseInt(vasSlider.value),
     note: formNote.value.trim(),
+    symptomId: formSymptom.value || null,
     attachedMuscle: pendingMarker.muscleInfo
       ? `${pendingMarker.muscleInfo.zh} (${pendingMarker.muscleInfo.latin})` : '',
+    photos: photos,
     timestamp: Date.now(),
     x: pendingMarker.position.x,
     y: pendingMarker.position.y,
     z: pendingMarker.position.z
   };
-  addRecord(rec);
+  await addRecord(rec);
+  pendingPhotos = [];
   closeMarkerForm();
   markMode = false;
   markBtn.classList.remove('active');
@@ -1387,47 +2334,103 @@ document.getElementById('records-close').addEventListener('click', () => {
   recordsModal.classList.remove('open');
 });
 
-function renderRecordsList() {
-  const records = loadRecords();
-  if (records.length === 0) {
-    recordsBody.innerHTML = `<div class="empty-records">尚無紀錄<br><br>點右上 ＋ 按鈕進入標記模式,<br>在身體上點選位置即可新增。</div>`;
-    return;
-  }
-  recordsBody.innerHTML = records.map(r => `
-    <div class="record-item" data-id="${r.id}">
-      <div class="record-row">
-        <span class="record-name">${r.name}</span>
-        <span class="record-vas">VAS ${r.vas}</span>
-      </div>
-      ${r.attachedMuscle ? `<div class="record-note" style="color:var(--text-muted)">${r.attachedMuscle}</div>` : ''}
-      ${r.note ? `<div class="record-note">${r.note}</div>` : ''}
-      <div class="record-date">${new Date(r.timestamp).toLocaleString('zh-TW')}</div>
-      <button class="record-delete" data-id="${r.id}">刪除</button>
+async function renderRecordsList() {
+  const records = await loadRecords();
+  // 學員 filter
+  const filterId = recordsFilterStudentId;
+  const filtered = filterId === 'all' ? records : records.filter(r => (r.studentId || '') === (filterId === '_none' ? '' : filterId));
+
+  // 上方學員 filter 列
+  const studentOpts = ['<option value="all">全部學員</option>',
+    '<option value="_none">— 無指定 —</option>',
+    ...STUDENTS.map(s => `<option value="${s.id}" ${s.id===filterId?'selected':''}>${s.name}</option>`)
+  ].join('');
+  const filterHtml = `
+    <div style="padding:10px 18px; border-bottom:1px solid var(--border); display:flex; gap:8px; align-items:center;">
+      <select class="form-select" id="records-filter" style="flex:1; padding:6px 30px 6px 10px; font-size:13px;">
+        ${studentOpts}
+      </select>
+      <button class="form-btn" id="open-students" style="padding:6px 12px; font-size:12px; flex:0 0 auto; width:auto;">管理學員</button>
     </div>
-  `).join('');
+  `;
+
+  if (filtered.length === 0) {
+    recordsBody.innerHTML = filterHtml +
+      `<div class="empty-records">尚無紀錄<br><br>右上 ＋ 進入標記模式,在身體上點選位置即可新增。</div>`;
+  } else {
+    recordsBody.innerHTML = filterHtml + filtered.map(r => {
+      const sym = r.symptomId ? findSymptomById(r.symptomId) : null;
+      const photoCount = (r.photos || []).length;
+      return `
+      <div class="record-item" data-id="${r.id}">
+        <div class="record-row">
+          <span class="record-name">${r.student ? r.student + ' · ' : ''}${r.name}</span>
+          <span class="record-vas">VAS ${r.vas}</span>
+        </div>
+        ${r.attachedMuscle ? `<div class="record-note" style="color:var(--text-muted)">${r.attachedMuscle}</div>` : ''}
+        ${sym ? `<div class="record-note" style="color:var(--accent)">⚑ ${sym.muscleName} — ${sym.symptoms}</div>` : ''}
+        ${photoCount > 0 ? `<div class="record-note" style="color:var(--text-muted)">📷 ${photoCount} 張照片</div>` : ''}
+        ${r.note ? `<div class="record-note">${r.note}</div>` : ''}
+        <div class="record-date">${new Date(r.timestamp).toLocaleString('zh-TW')}</div>
+        <div style="display:flex; gap:12px; margin-top:6px">
+          <button class="record-delete record-pdf" data-id="${r.id}" style="color:var(--text);">匯出 PDF</button>
+          <button class="record-delete" data-id="${r.id}">刪除</button>
+        </div>
+      </div>
+      `;
+    }).join('');
+  }
+
+  // wire up filter dropdown
+  document.getElementById('records-filter').addEventListener('change', (e) => {
+    recordsFilterStudentId = e.target.value;
+    renderRecordsList();
+  });
+  document.getElementById('open-students').addEventListener('click', () => {
+    recordsModal.classList.remove('open');
+    studentsPanel.classList.add('open');
+    lexiconPanel.classList.remove('open');
+    symptomsPanel.classList.remove('open');
+    renderStudentsList();
+  });
+
   recordsBody.querySelectorAll('.record-item').forEach(el => {
-    el.addEventListener('click', (e) => {
-      if (e.target.classList.contains('record-delete')) return;
+    el.addEventListener('click', async (e) => {
+      if (e.target.classList.contains('record-delete') || e.target.classList.contains('record-pdf')) return;
       const id = el.dataset.id;
-      const rec = loadRecords().find(r => r.id === id);
+      const all = await loadRecords();
+      const rec = all.find(r => r.id === id);
       if (rec) {
         showCustomInfo(rec);
         recordsModal.classList.remove('open');
         const target = new THREE.Vector3(rec.x, rec.y, rec.z);
-        animateCamera(
-          target.clone().add(new THREE.Vector3(0, 0, 2)),
-          target, 500
-        );
+        animateCamera(target.clone().add(new THREE.Vector3(0, 0, 2)), target, 500);
       }
     });
   });
-  recordsBody.querySelectorAll('.record-delete').forEach(b => {
-    b.addEventListener('click', (e) => {
+  recordsBody.querySelectorAll('.record-pdf').forEach(b => {
+    b.addEventListener('click', async (e) => {
       e.stopPropagation();
-      if (confirm('確定刪除這筆紀錄?')) deleteRecord(b.dataset.id);
+      const all = await loadRecords();
+      const rec = all.find(r => r.id === b.dataset.id);
+      if (rec) {
+        recordsModal.classList.remove('open');
+        setTimeout(() => exportRecordAsPDF(rec), 200);
+      }
+    });
+  });
+  recordsBody.querySelectorAll('.record-delete:not(.record-pdf)').forEach(b => {
+    b.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (confirm('確定刪除這筆紀錄?')) {
+        await deleteRecord(b.dataset.id);
+        renderRecordsList();
+      }
     });
   });
 }
+
+let recordsFilterStudentId = 'all';
 
 // ============================================
 // Lexicon 開關
@@ -1439,6 +2442,620 @@ document.getElementById('btn-lexicon').addEventListener('click', () => {
 document.getElementById('lex-close').addEventListener('click', () => {
   lexiconPanel.classList.remove('open');
 });
+
+// ============================================
+// 症狀對照面板
+// ============================================
+const symptomsPanel = document.getElementById('symptoms-panel');
+const symptomsTree = document.getElementById('symptoms-tree');
+const symSearch = document.getElementById('sym-search');
+
+let symEditMode = true;  // 永遠開啟,icon 永遠顯示
+
+function buildSymptomsTree() {
+  symptomsTree.innerHTML = '';
+
+  // 依目前所有出現過的章節分組,順序依 SYMPTOM_SECTION_ORDER 為基底
+  const allSections = [...new Set(SYMPTOMS.map(s => s.section))];
+  const ordered = [
+    ...SYMPTOM_SECTION_ORDER.filter(s => allSections.includes(s)),
+    ...allSections.filter(s => !SYMPTOM_SECTION_ORDER.includes(s)),
+  ];
+
+  ordered.forEach(section => {
+    const inSection = SYMPTOMS.filter(s => s.section === section);
+    if (inSection.length === 0) return;
+
+    const groupEl = document.createElement('div');
+    groupEl.className = 'lex-group open';
+
+    const headEl = document.createElement('div');
+    headEl.className = 'lex-group-head';
+    headEl.innerHTML = `
+      <span class="lex-group-title">${section}</span>
+      <span class="lex-group-count">${inSection.length}</span>
+    `;
+    headEl.addEventListener('click', () => groupEl.classList.toggle('open'));
+    groupEl.appendChild(headEl);
+
+    const items = document.createElement('div');
+    items.className = 'lex-group-items';
+    inSection.forEach(s => {
+      const item = document.createElement('div');
+      item.className = 'sym-item';
+      item.dataset.symId = s.id;
+      item.innerHTML = `
+        <div style="flex:1; min-width:0; cursor:pointer;" class="sym-item-body">
+          <div class="sym-item-muscle">${s.muscleName}</div>
+          <div class="sym-item-latin">${s.muscleLatin}</div>
+          <div class="sym-item-symptoms">${s.symptoms}</div>
+        </div>
+        <div class="sym-edit-actions">
+          <button class="icon-btn sym-edit-btn" title="編輯">✎</button>
+          <button class="icon-btn sym-del-btn" title="刪除">🗑</button>
+        </div>
+      `;
+      item.style.display = 'flex';
+      item.style.alignItems = 'flex-start';
+      item.querySelector('.sym-item-body').addEventListener('click', () => showSymptomDetail(s));
+      item.querySelector('.sym-edit-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        openSymptomForm(s);
+      });
+      item.querySelector('.sym-del-btn').addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if (confirm(`確定刪除「${s.muscleName} — ${s.symptoms}」?`)) {
+          await deleteSymptom(s.id);
+        }
+      });
+      items.appendChild(item);
+    });
+    groupEl.appendChild(items);
+    symptomsTree.appendChild(groupEl);
+  });
+}
+
+symSearch.addEventListener('input', () => {
+  const q = symSearch.value.trim().toLowerCase();
+  symptomsTree.querySelectorAll('.sym-item').forEach(it => {
+    const text = it.textContent.toLowerCase();
+    it.style.display = (!q || text.includes(q)) ? 'flex' : 'none';
+  });
+});
+
+document.getElementById('btn-symptoms').addEventListener('click', () => {
+  symptomsPanel.classList.toggle('open');
+  if (symptomsPanel.classList.contains('open')) {
+    lexiconPanel.classList.remove('open');
+  }
+});
+document.getElementById('symptoms-close').addEventListener('click', () => {
+  symptomsPanel.classList.remove('open');
+});
+
+document.getElementById('sym-add-btn').addEventListener('click', () => openSymptomForm(null));
+
+// === 症狀編輯表單 ===
+const symFormModal = document.getElementById('symptom-form-modal');
+const symFields = {
+  section: document.getElementById('sym-section'),
+  name: document.getElementById('sym-name'),
+  latin: document.getElementById('sym-latin'),
+  symptoms: document.getElementById('sym-symptoms'),
+  mechanism: document.getElementById('sym-mechanism'),
+  why: document.getElementById('sym-why'),
+  solution: document.getElementById('sym-solution'),
+  keys: document.getElementById('sym-keys'),
+};
+let editingSymptomId = null;
+
+function openSymptomForm(existing) {
+  editingSymptomId = existing?.id || null;
+  document.getElementById('symptom-form-title').textContent = existing ? '編輯症狀' : '新增症狀';
+
+  // 動態組 section 下拉:已存在的 + 內建
+  const sections = [...new Set([...SYMPTOM_SECTION_ORDER, ...SYMPTOMS.map(s => s.section)])];
+  symFields.section.innerHTML = sections.map(sec =>
+    `<option value="${sec}" ${existing?.section===sec?'selected':''}>${sec}</option>`
+  ).join('') + `<option value="__new__">+ 新章節…</option>`;
+  symFields.section.onchange = () => {
+    if (symFields.section.value === '__new__') {
+      const name = prompt('新章節名稱:');
+      if (name) {
+        const opt = document.createElement('option');
+        opt.value = name; opt.textContent = name; opt.selected = true;
+        symFields.section.insertBefore(opt, symFields.section.lastElementChild);
+        symFields.section.value = name;
+      } else {
+        symFields.section.value = sections[0];
+      }
+    }
+  };
+
+  symFields.name.value = existing?.muscleName || '';
+  symFields.latin.value = existing?.muscleLatin || '';
+  symFields.symptoms.value = existing?.symptoms || '';
+  symFields.mechanism.value = existing?.mechanism || '';
+  symFields.why.value = existing?.why || '';
+  symFields.solution.value = existing?.solution || '';
+  symFields.keys.value = (existing?.keys || []).join(', ');
+
+  symFormModal.classList.add('open');
+}
+function closeSymptomForm() { symFormModal.classList.remove('open'); editingSymptomId = null; }
+document.getElementById('symptom-form-close').addEventListener('click', closeSymptomForm);
+document.getElementById('symptom-form-cancel').addEventListener('click', closeSymptomForm);
+document.getElementById('symptom-form-save').addEventListener('click', async () => {
+  const name = symFields.name.value.trim();
+  const symptomsText = symFields.symptoms.value.trim();
+  if (!name) { alert('請填寫肌肉名稱'); return; }
+  if (!symptomsText) { alert('請填寫常見臨床症狀'); return; }
+  const rec = {
+    id: editingSymptomId || ('s-' + Date.now()),
+    section: symFields.section.value || '其他',
+    muscleName: name,
+    muscleLatin: symFields.latin.value.trim(),
+    symptoms: symptomsText,
+    mechanism: symFields.mechanism.value.trim(),
+    why: symFields.why.value.trim(),
+    solution: symFields.solution.value.trim(),
+    keys: symFields.keys.value.split(/[,，\n]/).map(k => k.trim()).filter(Boolean),
+    isBuiltin: false,
+  };
+  await saveSymptom(rec);
+  closeSymptomForm();
+});
+
+// ============================================
+// 學員面板(list / detail 兩個 view)
+// ============================================
+const studentsPanel = document.getElementById('students-panel');
+const stuContent = document.getElementById('stu-content');
+const stuPanelTitle = document.getElementById('stu-panel-title');
+const stuBackBtn = document.getElementById('stu-back');
+const studentFormModal = document.getElementById('student-form-modal');
+const studentNameInp = document.getElementById('student-name');
+const studentNotesInp = document.getElementById('student-notes');
+let editingStudentId = null;
+let studentFormReturnsTo = null; // 'marker' | 'list' | null
+
+document.getElementById('btn-students').addEventListener('click', () => {
+  studentsPanel.classList.toggle('open');
+  if (studentsPanel.classList.contains('open')) {
+    lexiconPanel.classList.remove('open');
+    symptomsPanel.classList.remove('open');
+    renderStudentsList();
+  }
+});
+document.getElementById('stu-close').addEventListener('click', () => studentsPanel.classList.remove('open'));
+stuBackBtn.addEventListener('click', () => renderStudentsList());
+
+function renderStudentsList() {
+  stuBackBtn.style.display = 'none';
+  stuPanelTitle.textContent = `學員列表 (${STUDENTS.length})`;
+  if (STUDENTS.length === 0) {
+    stuContent.innerHTML = `
+      <div class="stu-list-add">
+        <button id="stu-add-btn">＋ 新增學員</button>
+      </div>
+      <div class="empty-state">尚無學員<br><br>點上方按鈕新增第一位學員。</div>
+    `;
+  } else {
+    const sorted = [...STUDENTS].sort((a, b) => a.name.localeCompare(b.name, 'zh-Hant'));
+    stuContent.innerHTML = `
+      <div class="stu-list-add">
+        <button id="stu-add-btn">＋ 新增學員</button>
+      </div>
+      ${sorted.map(s => `
+        <div class="stu-item" data-id="${s.id}" style="cursor:pointer;">
+          <div class="stu-item-info">
+            <div class="stu-item-name">${s.name}</div>
+            ${s.notes ? `<div class="stu-item-notes">${s.notes.length > 60 ? s.notes.slice(0,60)+'…' : s.notes}</div>` : ''}
+          </div>
+          <span style="color:var(--text-dim); font-size:14px;">›</span>
+        </div>
+      `).join('')}
+    `;
+  }
+  document.getElementById('stu-add-btn').addEventListener('click', () => openStudentForm(null, 'list'));
+  stuContent.querySelectorAll('.stu-item').forEach(el => {
+    el.addEventListener('click', () => renderStudentDetail(el.dataset.id));
+  });
+}
+
+async function renderStudentDetail(studentId) {
+  const stu = STUDENTS.find(s => s.id === studentId);
+  if (!stu) { renderStudentsList(); return; }
+
+  stuBackBtn.style.display = 'block';
+  stuPanelTitle.textContent = stu.name;
+
+  // 把這位學員設為 active
+  setActiveStudentId(stu.id);
+  renderActiveStudentChip();
+
+  // 取得這位學員的所有紀錄
+  const allRecords = await loadRecords();
+  const studentRecords = allRecords.filter(r => r.studentId === stu.id);
+  // 依日期分組
+  const grouped = {};
+  studentRecords.forEach(r => {
+    const day = new Date(r.timestamp).toLocaleDateString('zh-TW');
+    if (!grouped[day]) grouped[day] = [];
+    grouped[day].push(r);
+  });
+  const days = Object.keys(grouped).sort((a, b) => new Date(b) - new Date(a));
+  const today = new Date().toLocaleDateString('zh-TW');
+  const hasToday = grouped[today] && grouped[today].length > 0;
+
+  stuContent.innerHTML = `
+    <div class="stu-detail-header">
+      <h2 class="stu-detail-name">${stu.name}</h2>
+      <div style="font-size:12px; color:var(--text-muted);">紀錄 ${studentRecords.length} 筆 · 共 ${days.length} 天</div>
+      ${stu.notes ? `<div class="stu-detail-notes">${stu.notes}</div>` : ''}
+      <div class="stu-detail-actions">
+        <button id="stu-edit-detail">編輯</button>
+        <button id="stu-delete-detail" class="danger">刪除</button>
+      </div>
+    </div>
+    ${studentRecords.length > 0 ? `
+      <div class="stu-export-bar">
+        ${hasToday ? `<button id="stu-export-today">匯出今日 PDF</button>` : ''}
+        <button id="stu-export-all">匯出全部 PDF</button>
+      </div>
+    ` : ''}
+    <div class="stu-records-header">
+      <span class="stu-records-title">紀錄時間軸</span>
+    </div>
+    ${studentRecords.length === 0 ? `
+      <div class="empty-state">此學員尚無紀錄</div>
+    ` : days.map(day => `
+      <div class="lex-group open">
+        <div class="lex-group-head">
+          <span class="lex-group-title">${day}${day===today?' (今日)':''}</span>
+          <span class="lex-group-count">${grouped[day].length}</span>
+        </div>
+        <div class="lex-group-items">
+          ${grouped[day].map(r => {
+            const sym = r.symptomId ? findSymptomById(r.symptomId) : null;
+            return `
+            <div class="record-item" data-rec-id="${r.id}">
+              <div class="record-row">
+                <span class="record-name">${r.name}</span>
+                <span class="record-vas">VAS ${r.vas}</span>
+              </div>
+              ${r.attachedMuscle ? `<div class="record-note" style="color:var(--text-muted)">${r.attachedMuscle}</div>` : ''}
+              ${sym ? `<div class="record-note" style="color:var(--accent)">⚑ ${sym.symptoms}</div>` : ''}
+              ${(r.photos||[]).length > 0 ? `<div class="record-note" style="color:var(--text-muted)">📷 ${r.photos.length} 張</div>` : ''}
+              <div class="record-date">${new Date(r.timestamp).toLocaleTimeString('zh-TW')}</div>
+              <div style="display:flex; gap:12px; margin-top:6px">
+                <button class="record-delete rec-export-single" data-id="${r.id}" style="color:var(--text);">匯出 PDF</button>
+                <button class="record-delete rec-delete-single" data-id="${r.id}">刪除</button>
+              </div>
+            </div>
+          `;}).join('')}
+        </div>
+      </div>
+    `).join('')}
+  `;
+
+  document.getElementById('stu-edit-detail').addEventListener('click', () => openStudentForm(stu, 'detail'));
+  document.getElementById('stu-delete-detail').addEventListener('click', async () => {
+    if (confirm(`確定刪除學員「${stu.name}」?(已建立的紀錄不會被刪除,只是失去與學員關聯)`)) {
+      await deleteStudent(stu.id);
+      renderStudentsList();
+    }
+  });
+
+  const todayBtn = document.getElementById('stu-export-today');
+  if (todayBtn) {
+    todayBtn.addEventListener('click', () => {
+      exportMultipleRecordsAsPDF(grouped[today], stu, `今日紀錄 — ${today}`);
+    });
+  }
+  const allBtn = document.getElementById('stu-export-all');
+  if (allBtn) {
+    allBtn.addEventListener('click', () => {
+      exportMultipleRecordsAsPDF(studentRecords, stu, `完整紀錄`);
+    });
+  }
+
+  // 點紀錄 → 跳到 3D 位置
+  stuContent.querySelectorAll('.record-item').forEach(el => {
+    el.addEventListener('click', async (e) => {
+      if (e.target.classList.contains('record-delete')) return;
+      const id = el.dataset.recId;
+      const all = await loadRecords();
+      const rec = all.find(r => r.id === id);
+      if (rec) {
+        showCustomInfo(rec);
+        studentsPanel.classList.remove('open');
+        const target = new THREE.Vector3(rec.x, rec.y, rec.z);
+        animateCamera(target.clone().add(new THREE.Vector3(0, 0, 2)), target, 500);
+      }
+    });
+  });
+
+  stuContent.querySelectorAll('.rec-export-single').forEach(b => {
+    b.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const all = await loadRecords();
+      const rec = all.find(r => r.id === b.dataset.id);
+      if (rec) exportRecordAsPDF(rec);
+    });
+  });
+  stuContent.querySelectorAll('.rec-delete-single').forEach(b => {
+    b.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (confirm('刪除這筆紀錄?')) {
+        await deleteRecord(b.dataset.id);
+        renderStudentDetail(studentId);
+      }
+    });
+  });
+}
+
+function openStudentForm(existing, returnTo) {
+  editingStudentId = existing?.id || null;
+  studentFormReturnsTo = returnTo;
+  document.getElementById('student-form-title').textContent = existing ? '編輯學員' : '新增學員';
+  studentNameInp.value = existing?.name || '';
+  studentNotesInp.value = existing?.notes || '';
+  studentFormModal.classList.add('open');
+}
+function closeStudentForm() { studentFormModal.classList.remove('open'); editingStudentId = null; }
+document.getElementById('student-form-close').addEventListener('click', closeStudentForm);
+document.getElementById('student-form-cancel').addEventListener('click', closeStudentForm);
+document.getElementById('student-form-save').addEventListener('click', async () => {
+  const name = studentNameInp.value.trim();
+  if (!name) { alert('請填學員名字'); return; }
+  const stu = {
+    id: editingStudentId || ('stu-' + Date.now()),
+    name: name,
+    notes: studentNotesInp.value.trim(),
+    createdAt: editingStudentId ? (STUDENTS.find(s => s.id === editingStudentId)?.createdAt || Date.now()) : Date.now(),
+  };
+  await addStudent(stu);
+  setActiveStudentId(stu.id);
+  renderActiveStudentChip();
+  closeStudentForm();
+
+  if (studentFormReturnsTo === 'marker') {
+    buildStudentSelect();
+    formStudentSelect.value = stu.id;
+    formStudent.value = stu.name;
+  } else if (studentFormReturnsTo === 'detail') {
+    renderStudentDetail(stu.id);
+  } else if (studentFormReturnsTo === 'list') {
+    renderStudentDetail(stu.id);
+  }
+  studentFormReturnsTo = null;
+});
+
+// 目前學員的小標籤
+function renderActiveStudentChip() {
+  const chip = document.getElementById('active-student-chip');
+  const stu = getActiveStudent();
+  if (stu) {
+    chip.textContent = stu.name;
+    chip.classList.add('show');
+    chip.onclick = () => {
+      studentsPanel.classList.add('open');
+      lexiconPanel.classList.remove('open');
+      symptomsPanel.classList.remove('open');
+      renderStudentDetail(stu.id);
+    };
+  } else {
+    chip.classList.remove('show');
+  }
+}
+
+// ============================================
+// PDF 匯出
+// ============================================
+
+// 把一筆紀錄轉成 HTML section
+async function buildRecordSectionHtml(rec) {
+  const sym = rec.symptomId ? findSymptomById(rec.symptomId) : null;
+  const dateStr = new Date(rec.timestamp).toLocaleString('zh-TW', {
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit'
+  });
+
+  let photosHtml = '';
+  if (rec.photos && rec.photos.length > 0) {
+    const photoEls = [];
+    for (const p of rec.photos) {
+      const url = await blobToDataURL(p.blob);
+      photoEls.push(`
+        <div style="text-align:center; page-break-inside:avoid;">
+          <img src="${url}" style="width:100%; max-height:90mm; object-fit:contain; border-radius:2mm;" crossorigin="anonymous">
+          <div style="font-size:10pt; color:#666; margin-top:2mm;">${p.label || ''}</div>
+        </div>
+      `);
+    }
+    photosHtml = `
+      <div class="pdf-section">
+        <h2>照片紀錄</h2>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:5mm; margin-top:3mm;">
+          ${photoEls.join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="pdf-section">
+      <h2 style="font-size:14pt; color:#1a1a1a; border-left-color:#666;">📍 ${rec.name} <span style="font-size:10pt; color:#666; font-weight:normal;">(${dateStr})</span></h2>
+      <div class="pdf-row">
+        <div class="pdf-row-label">疼痛程度</div>
+        <div class="pdf-row-value">VAS ${rec.vas} / 10</div>
+      </div>
+      ${rec.attachedMuscle ? `
+      <div class="pdf-row">
+        <div class="pdf-row-label">解剖位置</div>
+        <div class="pdf-row-value">${rec.attachedMuscle}</div>
+      </div>` : ''}
+      ${sym ? `
+        <div class="pdf-callout">
+          <div class="pdf-callout-label">💡 為什麼會這樣</div>
+          <div class="pdf-callout-text">${sym.why}</div>
+        </div>
+        <div class="pdf-callout solve">
+          <div class="pdf-callout-label">🛠️ 怎麼解決</div>
+          <div class="pdf-callout-text">${sym.solution}</div>
+        </div>
+      ` : ''}
+      ${rec.note ? `
+        <div style="margin-top:3mm;">
+          <div class="pdf-callout-label" style="margin-bottom:2mm;">教練備註</div>
+          <p style="font-size:11pt; line-height:1.75; margin:0;">${rec.note.replace(/\n/g, '<br>')}</p>
+        </div>
+      ` : ''}
+      ${photosHtml}
+    </div>
+  `;
+}
+
+// 等所有 img 載入完成
+function waitForImages(container) {
+  const imgs = container.querySelectorAll('img');
+  return Promise.all([...imgs].map(img => {
+    if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+    return new Promise(resolve => {
+      img.onload = img.onerror = () => resolve();
+      setTimeout(resolve, 5000); // 安全網
+    });
+  }));
+}
+
+// 全屏遮罩(在 PDF 產生時擋住 wrapper 不被使用者看到)
+function showPdfOverlay() {
+  const ov = document.createElement('div');
+  ov.style.cssText = `
+    position: fixed; inset: 0;
+    background: rgba(14, 15, 18, 0.95);
+    z-index: 99999;
+    display: flex; align-items: center; justify-content: center;
+    color: #e8e6e0; font-size: 14px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  `;
+  ov.innerHTML = `<div style="text-align:center;">
+    <div style="font-weight:500;">產生 PDF 中…</div>
+    <div style="margin-top:8px; font-size:11px; opacity:0.6;">通常需要 3–10 秒,有照片會更久</div>
+  </div>`;
+  document.body.appendChild(ov);
+  return ov;
+}
+
+// 共用:把 HTML 渲染成 PDF
+async function renderTemplateToPDF(tplHtml, filename) {
+  const overlay = showPdfOverlay();
+  let wrapper = null;
+
+  try {
+    // 動態建立 wrapper,放在畫面內(才能被 html2canvas 抓到),
+    // 但 z-index 比遮罩低,所以使用者只會看到遮罩。
+    // 完全 opaque、無 transform、無 visibility 詭計。
+    wrapper = document.createElement('div');
+    wrapper.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 210mm;
+      background: white;
+      color: #222;
+      font-family: "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+      z-index: 99998;
+    `;
+    wrapper.innerHTML = tplHtml;
+    document.body.appendChild(wrapper);
+
+    // 等照片載入 + 兩個 frame 讓 layout 穩定
+    await waitForImages(wrapper);
+    await new Promise(r => requestAnimationFrame(r));
+    await new Promise(r => requestAnimationFrame(r));
+
+    await html2pdf().set({
+      margin: 0,
+      filename: filename,
+      image: { type: 'jpeg', quality: 0.92 },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        // 明確告訴 html2canvas 該渲染的尺寸,避免它用 viewport 寬度
+        width: wrapper.offsetWidth,
+        windowWidth: wrapper.offsetWidth,
+      },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+    }).from(wrapper).save();
+  } catch (e) {
+    console.error('PDF 匯出失敗:', e);
+    alert('PDF 匯出失敗:' + (e.message || e));
+  } finally {
+    if (wrapper) wrapper.remove();
+    overlay.remove();
+  }
+}
+
+// 單筆紀錄
+async function exportRecordAsPDF(rec) {
+  const dateStr = new Date(rec.timestamp).toLocaleString('zh-TW', {
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit'
+  });
+  const studentName = rec.student || (STUDENTS.find(s => s.id === rec.studentId)?.name) || '學員';
+  const html = `
+    <div class="pdf-page">
+      <div class="pdf-header">
+        <h1 class="pdf-title">肌肉評估與居家照護建議</h1>
+        <div class="pdf-meta">學員:${studentName} · 評估日期 ${dateStr}</div>
+      </div>
+      ${await buildRecordSectionHtml(rec)}
+      <div class="pdf-footer">
+        本報告由肌肉互動 PWA 產出,僅供教學與運動訓練參考,不取代醫療診斷。<br>
+        如疼痛持續或加劇,請尋求合格醫師、物理治療師或運動傷害防護員協助。
+      </div>
+    </div>
+  `;
+  const filename = `評估_${studentName}_${dateStr.replace(/[\/\s:]/g, '')}.pdf`;
+  await renderTemplateToPDF(html, filename);
+}
+
+// 多筆紀錄(例如「今日全部」、「全部歷史」)
+async function exportMultipleRecordsAsPDF(records, student, subtitle) {
+  if (!records || records.length === 0) { alert('沒有紀錄可匯出'); return; }
+  const sorted = [...records].sort((a, b) => a.timestamp - b.timestamp);
+  const today = new Date().toLocaleDateString('zh-TW');
+  const studentName = student?.name || sorted[0].student || '學員';
+
+  const sections = [];
+  for (const rec of sorted) sections.push(await buildRecordSectionHtml(rec));
+
+  const html = `
+    <div class="pdf-page">
+      <div class="pdf-header">
+        <h1 class="pdf-title">${studentName} · 肌肉評估報告</h1>
+        <div class="pdf-meta">${subtitle} · 共 ${records.length} 筆 · 產出時間 ${today}</div>
+        ${student?.notes ? `<div style="margin-top:4mm; font-size:10pt; color:#666; padding:3mm; background:#fafafa; border-radius:2mm;">學員備註:${student.notes}</div>` : ''}
+      </div>
+      ${sections.join('<hr style="border:none; border-top:1px dashed #ddd; margin:8mm 0;">')}
+      <div class="pdf-footer">
+        本報告由肌肉互動 PWA 產出,僅供教學與運動訓練參考,不取代醫療診斷。<br>
+        如疼痛持續或加劇,請尋求合格醫師、物理治療師或運動傷害防護員協助。
+      </div>
+    </div>
+  `;
+  const filename = `${studentName}_${subtitle.replace(/[\/\s:—]/g, '')}_${today.replace(/\//g, '')}.pdf`;
+  await renderTemplateToPDF(html, filename);
+}
+
+// 把匯出函式掛到 window 方便 records list 呼叫
+window.exportRecordAsPDF = exportRecordAsPDF;
 
 // ============================================
 // 重置視角
@@ -1474,7 +3091,13 @@ window.addEventListener('resize', () => {
 
 animate();
 
-// 啟動:嘗試自動載入,失敗就讓使用者選檔
+// 啟動:平行載入 storage 與 model
+const storageReady = initStorage().then(() => {
+  buildSymptomsTree();
+  buildSymptomDropdown();
+  renderActiveStudentChip();
+}).catch(e => console.warn('initStorage failed', e));
+
 tryAutoLoad().then((ok) => { if (!ok) showFileDrop(); });
 
 // ============================================

@@ -10,7 +10,7 @@
  * 升版:改 CACHE_VERSION,瀏覽器會在下次訪問時清掉舊快取。
  */
 
-const CACHE_VERSION = 'muscle-app-v2';
+const CACHE_VERSION = 'muscle-app-v7';
 const APP_SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const LIB_CACHE = `${CACHE_VERSION}-libs`;
 const MODEL_CACHE = `${CACHE_VERSION}-models`;
